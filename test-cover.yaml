@@ -1,0 +1,36 @@
+schema_version: 1
+binding_type: pb
+interior_type: black_white
+paper_type: cream
+reading_direction: ltr
+platform_preset: true
+trim_size: sixX9
+page_count: 312
+front_cover_image: ""
+title: The Art of Testing
+subtitle: A Practical Guide
+author_name: Jane Doe
+front_cover_image_centered: false
+front_cover_image_offset_x_inches: 0.0
+front_cover_image_offset_y_inches: 0.0
+spine_text: true
+spine_color: auto
+spine_text_offset_inches: 0.0
+spine_color_extension_inches: 0.25
+blurb: |-
+  An essential companion for anyone who wants to write better software.
+  Packed with real-world examples and hard-won wisdom from the trenches.
+quote: The best error message is the one you never have to write.
+quote_attribution: Anonymous
+author_bio: |-
+  Jane Doe has been writing software for over twenty years. She lives in
+  Portland with her two cats and an increasingly elaborate espresso setup.
+color_title: "#daa520"
+color_accent: "#eec448"
+color_body: "#efe6d4"
+color_soft: "#c6bca9"
+author_photo: ""
+font_title: ""
+font_bold: ""
+font_regular: ""
+font_italic: ""
