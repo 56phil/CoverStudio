@@ -257,9 +257,9 @@ struct CoverRenderer {
         let scale = max(frontRect.width / CGFloat(cg.width), frontRect.height / CGFloat(cg.height))
         let sw = CGFloat(cg.width) * scale, sh = CGFloat(cg.height) * scale
         let ox = data.frontCoverImageCentered ? (sw - frontRect.width)/2
-                : (sw - frontRect.width)/2 + CGFloat(data.frontCoverImageOffsetXInches) * 300
+                : (sw - frontRect.width)/2 + CGFloat(data.resolvedImageOffsetX()) * 300
         let oy = data.frontCoverImageCentered ? (sh - totalH)/2
-                : (sh - totalH)/2 + CGFloat(data.frontCoverImageOffsetYInches) * 300
+                : (sh - totalH)/2 + CGFloat(data.resolvedImageOffsetY()) * 300
         ctx.draw(cg, in: CGRect(x: frontRect.minX - ox, y: frontRect.minY - oy, width: sw, height: sh))
         drawVerticalGradient(ctx: ctx, in: frontRect, topAlpha: 175, bottomAlpha: 205)
         ctx.restoreGState()

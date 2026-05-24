@@ -219,6 +219,7 @@ struct CoverData: Codable, Equatable {
         case hcBackAuthorBioOffsetXInches = "hc_back_author_bio_offset_x_inches"
         case hcBackAuthorBioOffsetYInches = "hc_back_author_bio_offset_y_inches"
         case backAuthorBioOffsetYInches = "back_author_bio_offset_y_inches"
+        case backAuthorBioParagraphGapPoints = "back_author_bio_paragraph_gap_points"
         case pbBackAuthorImageOffsetXInches = "pb_back_author_image_offset_x_inches"
         case pbBackAuthorImageOffsetYInches = "pb_back_author_image_offset_y_inches"
         case hcBackAuthorImageOffsetXInches = "hc_back_author_image_offset_x_inches"
@@ -399,10 +400,13 @@ struct CoverData: Codable, Equatable {
             bindingType: bindingType,
             fallback: .backAuthorBioOffsetYInches
         )
-        authorBioParagraphGapPoints = container.doubleOrZero(.authorBioParagraphGapPoints)
+        authorBioParagraphGapPoints = container.doubleOrDefault(
+            .authorBioParagraphGapPoints,
+            defaultValue: container.doubleOrDefault(.backAuthorBioParagraphGapPoints, defaultValue: 8.0)
+        )
 
         authorPhoto = container.stringOrEmpty(.authorPhoto)
-        authorPhotoScaleInches = container.doubleOrZero(.authorPhotoScaleInches)
+        authorPhotoScaleInches = container.doubleOrDefault(.authorPhotoScaleInches, defaultValue: 1.18)
         authorPhotoOffsetXInches = container.bindingDouble(
             canonical: .authorPhotoOffsetXInches,
             paperback: .pbBackAuthorImageOffsetXInches,
@@ -526,6 +530,12 @@ extension KeyedDecodingContainer where Key == CoverData.CodingKeys {
     func doubleOrOne(_ key: Key) -> Double {
         let v = doubleOrZero(key)
         return v == 0.0 ? 1.0 : v
+    }
+
+    func doubleOrDefault(_ key: Key, defaultValue: Double) -> Double {
+        if let d = try? decodeIfPresent(Double.self, forKey: key) { return d }
+        if let s = try? decodeIfPresent(String.self, forKey: key), let d = Double(s) { return d }
+        return defaultValue
     }
 
     func stringOrEmpty(_ key: Key) -> String {

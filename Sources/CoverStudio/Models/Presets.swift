@@ -89,7 +89,7 @@ enum TrimPreset: String, Codable, CaseIterable {
     var label: String {
         if self == .custom { return "Custom" }
         let dims = dimensions
-        return "\(dims.width)g × \(dims.height)g in"
+        return "\(dims.width) × \(dims.height) in"
     }
 
     static func paperbackPresets() -> [TrimPreset] { allCases }
