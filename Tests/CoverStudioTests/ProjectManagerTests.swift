@@ -108,6 +108,35 @@ final class ProjectManagerTests: XCTestCase {
         XCTAssertTrue(saved.contains("Edit the YAML frontmatter directly."))
     }
 
+    func testSavingMarkdownUpdatesBindingSpecificFrontKeys() throws {
+        let coverURL = try makeCoverFile(contents: """
+        ---
+        schema_version: 1
+        binding_type: hc
+        title: On Proportion
+        hc_front_image_offset_x_inches: 0.18
+        hc_front_title_offset_x_inches: -0.3
+        hc_front_subtitle_offset_y_inches: 0
+        hc_front_author_offset_y_inches: -0.25
+        pb_front_title_offset_x_inches: 0.05
+        ---
+        """)
+
+        var data = try ProjectManager.load(from: coverURL)
+        data.hcFrontImageOffsetXInches = 0.22
+        data.hcFrontTitleOffsetXInches = -0.35
+        data.hcFrontSubtitleOffsetYInches = 0.08
+        data.hcFrontAuthorOffsetYInches = -0.3
+        try ProjectManager.save(data, to: coverURL)
+
+        let saved = try savedFrontmatterMap(from: coverURL)
+        XCTAssertEqual(try numericValue(saved, "hc_front_image_offset_x_inches"), 0.22, accuracy: 0.0001)
+        XCTAssertEqual(try numericValue(saved, "hc_front_title_offset_x_inches"), -0.35, accuracy: 0.0001)
+        XCTAssertEqual(try numericValue(saved, "hc_front_subtitle_offset_y_inches"), 0.08, accuracy: 0.0001)
+        XCTAssertEqual(try numericValue(saved, "hc_front_author_offset_y_inches"), -0.3, accuracy: 0.0001)
+        XCTAssertEqual(try numericValue(saved, "pb_front_title_offset_x_inches"), 0.05, accuracy: 0.0001)
+    }
+
     private func makeCoverFile(contents: String) throws -> URL {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("CoverStudioTests-\(UUID().uuidString)", isDirectory: true)
@@ -118,5 +147,25 @@ final class ProjectManagerTests: XCTestCase {
         let coverURL = coverDirectory.appendingPathComponent("cover.md")
         try contents.write(to: coverURL, atomically: true, encoding: .utf8)
         return coverURL
+    }
+
+    private func savedFrontmatterMap(from url: URL) throws -> [String: Any] {
+        let saved = try String(contentsOf: url, encoding: .utf8)
+        let bodyStart = saved.index(saved.startIndex, offsetBy: 4)
+        guard saved.hasPrefix("---\n"),
+              let closingRange = saved[bodyStart...].range(of: "\n---"),
+              let map = try Yams.load(yaml: String(saved[bodyStart..<closingRange.lowerBound])) as? [String: Any] else {
+            XCTFail("Saved Markdown frontmatter could not be parsed")
+            return [:]
+        }
+        return map
+    }
+
+    private func numericValue(_ map: [String: Any], _ key: String) throws -> Double {
+        if let value = map[key] as? Double { return value }
+        if let value = map[key] as? Int { return Double(value) }
+        if let value = map[key] as? String, let number = Double(value) { return number }
+        XCTFail("Missing numeric value for \(key)")
+        return .nan
     }
 }

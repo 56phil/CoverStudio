@@ -83,6 +83,14 @@ struct CoverData: Codable, Equatable {
         if bindingType == .hc { return hcFrontAuthorScale }
         return frontAuthorScale
     }
+    func resolvedSubtitleOffsetX() -> Double {
+        if bindingType == .hc { return hcFrontSubtitleOffsetXInches }
+        return frontSubtitleOffsetXInches
+    }
+    func resolvedSubtitleOffsetY() -> Double {
+        if bindingType == .hc { return hcFrontSubtitleOffsetYInches }
+        return frontSubtitleOffsetYInches
+    }
     func resolvedImageOffsetX() -> Double {
         if bindingType == .hc { return hcFrontImageOffsetXInches }
         return frontCoverImageOffsetXInches
@@ -174,6 +182,8 @@ struct CoverData: Codable, Equatable {
         case frontCoverImageCentered = "front_cover_image_centered"
         case frontCoverImageOffsetXInches = "front_cover_image_offset_x_inches"
         case frontCoverImageOffsetYInches = "front_cover_image_offset_y_inches"
+        case pbFrontImageOffsetXInches = "pb_front_image_offset_x_inches"
+        case pbFrontImageOffsetYInches = "pb_front_image_offset_y_inches"
 
         case title, subtitle
         case frontText = "front_text"
@@ -186,6 +196,12 @@ struct CoverData: Codable, Equatable {
         case frontAuthorOffsetXInches = "front_author_offset_x_inches"
         case frontAuthorOffsetYInches = "front_author_offset_y_inches"
         case frontAuthorScale = "front_author_scale"
+        case pbFrontTitleOffsetXInches = "pb_front_title_offset_x_inches"
+        case pbFrontTitleOffsetYInches = "pb_front_title_offset_y_inches"
+        case pbFrontSubtitleOffsetXInches = "pb_front_subtitle_offset_x_inches"
+        case pbFrontSubtitleOffsetYInches = "pb_front_subtitle_offset_y_inches"
+        case pbFrontAuthorOffsetXInches = "pb_front_author_offset_x_inches"
+        case pbFrontAuthorOffsetYInches = "pb_front_author_offset_y_inches"
 
         // Binding-specific CodingKeys for legacy hc_ prefixed fields
         case hcFrontImageOffsetXInches = "hc_front_image_offset_x_inches"
@@ -301,20 +317,60 @@ struct CoverData: Codable, Equatable {
 
         frontCoverImage = container.stringOrEmpty(.frontCoverImage)
         frontCoverImageCentered = container.boolOrFalse(.frontCoverImageCentered)
-        frontCoverImageOffsetXInches = container.doubleOrZero(.frontCoverImageOffsetXInches)
-        frontCoverImageOffsetYInches = container.doubleOrZero(.frontCoverImageOffsetYInches)
+        frontCoverImageOffsetXInches = container.bindingDouble(
+            canonical: .frontCoverImageOffsetXInches,
+            paperback: .pbFrontImageOffsetXInches,
+            hardcover: .frontCoverImageOffsetXInches,
+            bindingType: .pb
+        )
+        frontCoverImageOffsetYInches = container.bindingDouble(
+            canonical: .frontCoverImageOffsetYInches,
+            paperback: .pbFrontImageOffsetYInches,
+            hardcover: .frontCoverImageOffsetYInches,
+            bindingType: .pb
+        )
 
         frontText = container.boolOrTrue(.frontText)
         title = container.stringOrEmpty(.title)
         subtitle = container.stringOrEmpty(.subtitle)
         authorName = container.stringOrEmpty(.authorName)
-        frontTitleOffsetXInches = container.doubleOrZero(.frontTitleOffsetXInches)
-        frontTitleOffsetYInches = container.doubleOrZero(.frontTitleOffsetYInches)
+        frontTitleOffsetXInches = container.bindingDouble(
+            canonical: .frontTitleOffsetXInches,
+            paperback: .pbFrontTitleOffsetXInches,
+            hardcover: .frontTitleOffsetXInches,
+            bindingType: .pb
+        )
+        frontTitleOffsetYInches = container.bindingDouble(
+            canonical: .frontTitleOffsetYInches,
+            paperback: .pbFrontTitleOffsetYInches,
+            hardcover: .frontTitleOffsetYInches,
+            bindingType: .pb
+        )
         frontTitleScale = container.doubleOrOne(.frontTitleScale)
-        frontSubtitleOffsetXInches = container.doubleOrZero(.frontSubtitleOffsetXInches)
-        frontSubtitleOffsetYInches = container.doubleOrZero(.frontSubtitleOffsetYInches)
-        frontAuthorOffsetXInches = container.doubleOrZero(.frontAuthorOffsetXInches)
-        frontAuthorOffsetYInches = container.doubleOrZero(.frontAuthorOffsetYInches)
+        frontSubtitleOffsetXInches = container.bindingDouble(
+            canonical: .frontSubtitleOffsetXInches,
+            paperback: .pbFrontSubtitleOffsetXInches,
+            hardcover: .frontSubtitleOffsetXInches,
+            bindingType: .pb
+        )
+        frontSubtitleOffsetYInches = container.bindingDouble(
+            canonical: .frontSubtitleOffsetYInches,
+            paperback: .pbFrontSubtitleOffsetYInches,
+            hardcover: .frontSubtitleOffsetYInches,
+            bindingType: .pb
+        )
+        frontAuthorOffsetXInches = container.bindingDouble(
+            canonical: .frontAuthorOffsetXInches,
+            paperback: .pbFrontAuthorOffsetXInches,
+            hardcover: .frontAuthorOffsetXInches,
+            bindingType: .pb
+        )
+        frontAuthorOffsetYInches = container.bindingDouble(
+            canonical: .frontAuthorOffsetYInches,
+            paperback: .pbFrontAuthorOffsetYInches,
+            hardcover: .frontAuthorOffsetYInches,
+            bindingType: .pb
+        )
         frontAuthorScale = container.doubleOrOne(.frontAuthorScale)
 
         hcFrontImageOffsetXInches = container.doubleOrZero(.hcFrontImageOffsetXInches)
@@ -463,6 +519,10 @@ struct CoverData: Codable, Equatable {
         try container.encode(frontCoverImageCentered, forKey: .frontCoverImageCentered)
         try container.encode(frontCoverImageOffsetXInches, forKey: .frontCoverImageOffsetXInches)
         try container.encode(frontCoverImageOffsetYInches, forKey: .frontCoverImageOffsetYInches)
+        try container.encode(frontCoverImageOffsetXInches, forKey: .pbFrontImageOffsetXInches)
+        try container.encode(frontCoverImageOffsetYInches, forKey: .pbFrontImageOffsetYInches)
+        try container.encode(hcFrontImageOffsetXInches, forKey: .hcFrontImageOffsetXInches)
+        try container.encode(hcFrontImageOffsetYInches, forKey: .hcFrontImageOffsetYInches)
         try container.encode(frontText, forKey: .frontText)
         try container.encode(title, forKey: .title)
         try container.encode(subtitle, forKey: .subtitle)
@@ -470,11 +530,25 @@ struct CoverData: Codable, Equatable {
         try container.encode(frontTitleOffsetXInches, forKey: .frontTitleOffsetXInches)
         try container.encode(frontTitleOffsetYInches, forKey: .frontTitleOffsetYInches)
         try container.encode(frontTitleScale, forKey: .frontTitleScale)
+        try container.encode(frontTitleOffsetXInches, forKey: .pbFrontTitleOffsetXInches)
+        try container.encode(frontTitleOffsetYInches, forKey: .pbFrontTitleOffsetYInches)
+        try container.encode(hcFrontTitleOffsetXInches, forKey: .hcFrontTitleOffsetXInches)
+        try container.encode(hcFrontTitleOffsetYInches, forKey: .hcFrontTitleOffsetYInches)
+        try container.encode(hcFrontTitleScale, forKey: .hcFrontTitleScale)
         try container.encode(frontSubtitleOffsetXInches, forKey: .frontSubtitleOffsetXInches)
         try container.encode(frontSubtitleOffsetYInches, forKey: .frontSubtitleOffsetYInches)
+        try container.encode(frontSubtitleOffsetXInches, forKey: .pbFrontSubtitleOffsetXInches)
+        try container.encode(frontSubtitleOffsetYInches, forKey: .pbFrontSubtitleOffsetYInches)
+        try container.encode(hcFrontSubtitleOffsetXInches, forKey: .hcFrontSubtitleOffsetXInches)
+        try container.encode(hcFrontSubtitleOffsetYInches, forKey: .hcFrontSubtitleOffsetYInches)
         try container.encode(frontAuthorOffsetXInches, forKey: .frontAuthorOffsetXInches)
         try container.encode(frontAuthorOffsetYInches, forKey: .frontAuthorOffsetYInches)
         try container.encode(frontAuthorScale, forKey: .frontAuthorScale)
+        try container.encode(frontAuthorOffsetXInches, forKey: .pbFrontAuthorOffsetXInches)
+        try container.encode(frontAuthorOffsetYInches, forKey: .pbFrontAuthorOffsetYInches)
+        try container.encode(hcFrontAuthorOffsetXInches, forKey: .hcFrontAuthorOffsetXInches)
+        try container.encode(hcFrontAuthorOffsetYInches, forKey: .hcFrontAuthorOffsetYInches)
+        try container.encode(hcFrontAuthorScale, forKey: .hcFrontAuthorScale)
         try container.encode(spineText, forKey: .spineText)
         try container.encode(spineColor, forKey: .spineColor)
         try container.encode(spineTextOffsetInches, forKey: .spineTextOffsetInches)

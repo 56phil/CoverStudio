@@ -12,13 +12,13 @@ struct FrontTab: View {
                 VStack(spacing: 2) {
                     HStack {
                         Slider(value: Binding(
-                            get: { data.frontTitleScale },
+                            get: { data.resolvedTitleScale() },
                             set: { newValue in
-                                data.frontTitleScale = newValue
-                                data.frontAuthorScale = newValue
+                                setActiveTitleScale(newValue)
+                                setActiveAuthorScale(newValue)
                             }
                         ), in: 0.5...2.5, step: 0.05)
-                        Text(String(format: "%.2f", data.frontTitleScale))
+                        Text(String(format: "%.2f", data.resolvedTitleScale()))
                             .font(.caption.monospacedDigit())
                             .frame(width: 36)
                     }
@@ -55,7 +55,7 @@ struct FrontTab: View {
                     .onDrop(of: [.fileURL], isTargeted: $isDropTargeted) { handleDrop(providers: $0) }
                 }
                 Toggle("Center image", isOn: $data.frontCoverImageCentered)
-                OffsetRow("Offset", ox: $data.frontCoverImageOffsetXInches, oy: $data.frontCoverImageOffsetYInches)
+                OffsetRow("Offset", ox: activeImageOffsetX, oy: activeImageOffsetY)
             }
 
             Section("Text") {
@@ -64,29 +64,17 @@ struct FrontTab: View {
 
             Section("Title") {
                 TextField(text: $data.title, prompt: Text("Book Title")) { Text("Title") }
-                OffsetRow("Offset", ox: Binding(
-                    get: { data.resolvedOffsetX() },
-                    set: { data.frontTitleOffsetXInches = $0; data.hcFrontTitleOffsetXInches = $0 }
-                ), oy: Binding(
-                    get: { data.resolvedOffsetY() },
-                    set: { data.frontTitleOffsetYInches = $0; data.hcFrontTitleOffsetYInches = $0 }
-                ))
+                OffsetRow("Offset", ox: activeTitleOffsetX, oy: activeTitleOffsetY)
             }
 
             Section("Subtitle") {
                 TextField(text: $data.subtitle, prompt: Text("Subtitle (optional)")) { Text("Subtitle") }
-                OffsetRow("Offset", ox: $data.frontSubtitleOffsetXInches, oy: $data.frontSubtitleOffsetYInches)
+                OffsetRow("Offset", ox: activeSubtitleOffsetX, oy: activeSubtitleOffsetY)
             }
 
             Section("Author") {
                 TextField(text: $data.authorName, prompt: Text("Author Name")) { Text("Author") }
-                OffsetRow("Offset", ox: Binding(
-                    get: { data.resolvedAuthorOffsetX() },
-                    set: { data.frontAuthorOffsetXInches = $0; data.hcFrontAuthorOffsetXInches = $0 }
-                ), oy: Binding(
-                    get: { data.resolvedAuthorOffsetY() },
-                    set: { data.frontAuthorOffsetYInches = $0; data.hcFrontAuthorOffsetYInches = $0 }
-                ))
+                OffsetRow("Offset", ox: activeAuthorOffsetX, oy: activeAuthorOffsetY)
             }
 
             Section("Author Photo") {
@@ -101,6 +89,96 @@ struct FrontTab: View {
                 }
             }
         }
+    }
+
+    private var activeImageOffsetX: Binding<Double> {
+        Binding(
+            get: { data.resolvedImageOffsetX() },
+            set: {
+                if data.bindingType == .hc { data.hcFrontImageOffsetXInches = $0 }
+                else { data.frontCoverImageOffsetXInches = $0 }
+            }
+        )
+    }
+
+    private var activeImageOffsetY: Binding<Double> {
+        Binding(
+            get: { data.resolvedImageOffsetY() },
+            set: {
+                if data.bindingType == .hc { data.hcFrontImageOffsetYInches = $0 }
+                else { data.frontCoverImageOffsetYInches = $0 }
+            }
+        )
+    }
+
+    private var activeTitleOffsetX: Binding<Double> {
+        Binding(
+            get: { data.resolvedOffsetX() },
+            set: {
+                if data.bindingType == .hc { data.hcFrontTitleOffsetXInches = $0 }
+                else { data.frontTitleOffsetXInches = $0 }
+            }
+        )
+    }
+
+    private var activeTitleOffsetY: Binding<Double> {
+        Binding(
+            get: { data.resolvedOffsetY() },
+            set: {
+                if data.bindingType == .hc { data.hcFrontTitleOffsetYInches = $0 }
+                else { data.frontTitleOffsetYInches = $0 }
+            }
+        )
+    }
+
+    private var activeSubtitleOffsetX: Binding<Double> {
+        Binding(
+            get: { data.resolvedSubtitleOffsetX() },
+            set: {
+                if data.bindingType == .hc { data.hcFrontSubtitleOffsetXInches = $0 }
+                else { data.frontSubtitleOffsetXInches = $0 }
+            }
+        )
+    }
+
+    private var activeSubtitleOffsetY: Binding<Double> {
+        Binding(
+            get: { data.resolvedSubtitleOffsetY() },
+            set: {
+                if data.bindingType == .hc { data.hcFrontSubtitleOffsetYInches = $0 }
+                else { data.frontSubtitleOffsetYInches = $0 }
+            }
+        )
+    }
+
+    private var activeAuthorOffsetX: Binding<Double> {
+        Binding(
+            get: { data.resolvedAuthorOffsetX() },
+            set: {
+                if data.bindingType == .hc { data.hcFrontAuthorOffsetXInches = $0 }
+                else { data.frontAuthorOffsetXInches = $0 }
+            }
+        )
+    }
+
+    private var activeAuthorOffsetY: Binding<Double> {
+        Binding(
+            get: { data.resolvedAuthorOffsetY() },
+            set: {
+                if data.bindingType == .hc { data.hcFrontAuthorOffsetYInches = $0 }
+                else { data.frontAuthorOffsetYInches = $0 }
+            }
+        )
+    }
+
+    private func setActiveTitleScale(_ value: Double) {
+        if data.bindingType == .hc { data.hcFrontTitleScale = value }
+        else { data.frontTitleScale = value }
+    }
+
+    private func setActiveAuthorScale(_ value: Double) {
+        if data.bindingType == .hc { data.hcFrontAuthorScale = value }
+        else { data.frontAuthorScale = value }
     }
 
     private func chooseImage() {
