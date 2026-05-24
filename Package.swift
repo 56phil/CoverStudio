@@ -17,5 +17,10 @@ let package = Package(
             path: "Sources/CoverStudio",
             resources: [.copy("Resources")]
         ),
+        .testTarget(
+            name: "CoverStudioTests",
+            dependencies: ["CoverStudio", "Yams"],
+            path: "Tests/CoverStudioTests"
+        ),
     ]
 )
