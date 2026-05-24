@@ -198,6 +198,7 @@ struct CoverRenderer {
     private func drawFront(ctx: CGContext) {
         let g = geometry
         if !data.frontCoverImage.isEmpty { drawFrontImage(ctx: ctx) }
+        guard data.frontText else { return }
 
         let maxW = CGFloat(g.frontWidth - g.safe * 2)
         let centerX = CGFloat(g.effectiveFrontLeft) + CGFloat(g.frontWidth) / 2

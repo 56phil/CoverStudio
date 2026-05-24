@@ -33,6 +33,7 @@ struct CoverData: Codable, Equatable {
     var frontCoverImageOffsetYInches: Double = 0.0
 
     // Front cover — text
+    var frontText: Bool = true
     var title: String = ""
     var subtitle: String = ""
     var authorName: String = ""
@@ -175,6 +176,7 @@ struct CoverData: Codable, Equatable {
         case frontCoverImageOffsetYInches = "front_cover_image_offset_y_inches"
 
         case title, subtitle
+        case frontText = "front_text"
         case authorName = "author_name"
         case frontTitleOffsetXInches = "front_title_offset_x_inches"
         case frontTitleOffsetYInches = "front_title_offset_y_inches"
@@ -301,6 +303,7 @@ struct CoverData: Codable, Equatable {
         frontCoverImageOffsetXInches = container.doubleOrZero(.frontCoverImageOffsetXInches)
         frontCoverImageOffsetYInches = container.doubleOrZero(.frontCoverImageOffsetYInches)
 
+        frontText = container.boolOrTrue(.frontText)
         title = container.stringOrEmpty(.title)
         subtitle = container.stringOrEmpty(.subtitle)
         authorName = container.stringOrEmpty(.authorName)
@@ -456,6 +459,7 @@ struct CoverData: Codable, Equatable {
         try container.encode(frontCoverImageCentered, forKey: .frontCoverImageCentered)
         try container.encode(frontCoverImageOffsetXInches, forKey: .frontCoverImageOffsetXInches)
         try container.encode(frontCoverImageOffsetYInches, forKey: .frontCoverImageOffsetYInches)
+        try container.encode(frontText, forKey: .frontText)
         try container.encode(title, forKey: .title)
         try container.encode(subtitle, forKey: .subtitle)
         try container.encode(authorName, forKey: .authorName)

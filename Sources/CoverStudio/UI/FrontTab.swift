@@ -58,6 +58,10 @@ struct FrontTab: View {
                 OffsetRow("Offset", ox: $data.frontCoverImageOffsetXInches, oy: $data.frontCoverImageOffsetYInches)
             }
 
+            Section("Text") {
+                Toggle("Draw front text", isOn: $data.frontText)
+            }
+
             Section("Title") {
                 TextField(text: $data.title, prompt: Text("Book Title")) { Text("Title") }
                 OffsetRow("Offset", ox: Binding(
