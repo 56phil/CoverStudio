@@ -111,7 +111,7 @@ struct FontPicker: View {
                         .padding(.bottom, 8)
 
                     // Font list
-                    List(Array(availableFonts.prefix(300)), id: \.self) { font in
+                    List(availableFonts, id: \.self) { font in
                         Button(action: {
                             fontName = font
                             showSheet = false
@@ -166,7 +166,7 @@ struct HexColorRow: View {
 
             TextField("#RRGGBB", text: $hex)
                 .font(.system(.body, design: .monospaced))
-                .frame(width: 90)
+                .frame(minWidth: 130, idealWidth: 150, maxWidth: .infinity)
                 .onChange(of: hex) { _, newValue in
                     var cleaned = newValue.trimmingCharacters(in: .whitespaces).uppercased()
                     if cleaned.hasPrefix("#") { cleaned.removeFirst() }

@@ -28,6 +28,7 @@ struct ContentView: View {
     @Environment(\.undoManager) private var undoManager
     @StateObject private var undoCoordinator = UndoCoordinator()
     @State private var validationIssues: [Validation.Issue] = []
+    @State private var previewResetID = UUID()
 
     /// Project root derived from the opened file
     var projectRoot: String? {
@@ -90,6 +91,7 @@ struct ContentView: View {
 
                 PreviewPane(image: previewImage, errorMessage: errorMessage,
                              widthInches: coverWidthInches, heightInches: coverHeightInches)
+                    .id(previewResetID)
                 StatusLine(data: document.data, projectRoot: projectRoot, validationIssues: validationIssues)
             }
         }
@@ -207,6 +209,15 @@ struct ContentView: View {
             return
         }
 
+        if undoManager?.canUndo == true {
+            let alert = NSAlert()
+            alert.messageText = "Reload from disk?"
+            alert.informativeText = "Any unsaved changes will be lost."
+            alert.addButton(withTitle: "Reload")
+            alert.addButton(withTitle: "Cancel")
+            guard alert.runModal() == .alertFirstButtonReturn else { return }
+        }
+
         do {
             try loadCoverFile(url)
             scheduleRender()
@@ -310,6 +321,7 @@ struct ContentView: View {
     private func loadCoverFile(_ url: URL) throws {
         document.data = try ProjectManager.load(from: url)
         currentFileURL = url
+        previewResetID = UUID()
         undoCoordinator.undoManager?.removeAllActions()
         persistCurrentCoverFile(url)
     }

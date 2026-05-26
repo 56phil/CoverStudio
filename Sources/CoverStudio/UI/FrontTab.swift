@@ -9,7 +9,7 @@ struct FrontTab: View {
 
     var body: some View {
         Form {
-            Section("Scale") {
+            Section("Title & Author Scale") {
                 VStack(spacing: 2) {
                     HStack {
                         Slider(value: Binding(
@@ -18,12 +18,12 @@ struct FrontTab: View {
                                 setActiveTitleScale(newValue)
                                 setActiveAuthorScale(newValue)
                             }
-                        ), in: 0.5...1.5, step: 0.02)
-                        Text(String(format: "%.2f", data.resolvedTitleScale()))
+                        ), in: 0.25...2.0, step: 0.05)
+                        Text(String(format: "%.2f×", data.resolvedTitleScale()))
                             .font(.caption.monospacedDigit())
-                            .frame(width: 42)
+                            .frame(width: 46)
                     }
-                    Text("Applies to both title and author")
+                    Text("Sets title and author scale together. Use the individual controls below to adjust separately.")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
@@ -72,6 +72,7 @@ struct FrontTab: View {
             Section("Title") {
                 TextField(text: $data.title, prompt: Text("Book Title")) { Text("Title") }
                 CenterAxisRow(centerX: activeTitleCenterX, centerY: activeTitleCenterY)
+                ScaleRow("Scale", scale: activeTitleScale)
                 OffsetRow("Offset", ox: activeTitleOffsetX, oy: activeTitleOffsetY)
             }
 
@@ -92,6 +93,7 @@ struct FrontTab: View {
             Section("Author") {
                 TextField(text: $data.authorName, prompt: Text("Author Name")) { Text("Author") }
                 CenterAxisRow(centerX: activeAuthorCenterX, centerY: activeAuthorCenterY)
+                ScaleRow("Scale", scale: activeAuthorScale)
                 OffsetRow("Offset", ox: activeAuthorOffsetX, oy: activeAuthorOffsetY)
             }
 
@@ -249,6 +251,20 @@ struct FrontTab: View {
         )
     }
 
+    private var activeTitleScale: Binding<Double> {
+        Binding(
+            get: { data.resolvedTitleScale() },
+            set: { setActiveTitleScale(max($0, 0.1)) }
+        )
+    }
+
+    private var activeAuthorScale: Binding<Double> {
+        Binding(
+            get: { data.resolvedAuthorScale() },
+            set: { setActiveAuthorScale(max($0, 0.1)) }
+        )
+    }
+
     private func setActiveTitleScale(_ value: Double) {
         if data.bindingType == .hc { data.hcFrontTitleScale = value }
         else { data.frontTitleScale = value }
@@ -269,7 +285,9 @@ struct FrontTab: View {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.png, .jpeg, .tiff, .bmp, .heic]
         panel.canChooseFiles = true; panel.canChooseDirectories = false; panel.allowsMultipleSelection = false
-        if panel.runModal() == .OK, let url = panel.url { data.frontCoverImage = url.path }
+        if panel.runModal() == .OK, let url = panel.url {
+            data.frontCoverImage = ProjectManager.makeRelativePath(url, relativeTo: sourceURL)
+        }
     }
 
     private func handleDrop(providers: [NSItemProvider]) -> Bool {
@@ -278,11 +296,33 @@ struct FrontTab: View {
             if let d = item as? Data, let url = URL(dataRepresentation: d, relativeTo: nil) {
                 let exts = ["png","jpg","jpeg","tiff","tif","bmp","heic","heif"]
                 if exts.contains(url.pathExtension.lowercased()) {
-                    DispatchQueue.main.async { self.data.frontCoverImage = url.path }
+                    DispatchQueue.main.async {
+                        self.data.frontCoverImage = ProjectManager.makeRelativePath(url, relativeTo: self.sourceURL)
+                    }
                 }
             }
         }
         return true
+    }
+}
+
+struct ScaleRow: View {
+    let label: String
+    @Binding var scale: Double
+
+    init(_ label: String, scale: Binding<Double>) {
+        self.label = label
+        self._scale = scale
+    }
+
+    var body: some View {
+        HStack {
+            Text(label).frame(width: 50, alignment: .leading)
+            Slider(value: $scale, in: 0.25...2.0, step: 0.05)
+            TextField("×", value: $scale, format: .number)
+                .frame(width: 56)
+            Text("×").foregroundColor(.secondary)
+        }
     }
 }
 

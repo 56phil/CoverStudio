@@ -1,7 +1,15 @@
 import Foundation
 import Yams
+import UniformTypeIdentifiers
 
 struct ProjectManager {
+    static let coverContentTypes: [UTType] = [
+        .yaml,
+        UTType(filenameExtension: "yml") ?? .yaml,
+        UTType(filenameExtension: "md") ?? .plainText,
+        .json
+    ]
+
     static func load(from url: URL) throws -> CoverData {
         let contents = try String(contentsOf: url, encoding: .utf8)
         let yamlString = try yamlPayload(from: contents, url: url)
@@ -43,6 +51,16 @@ struct ProjectManager {
         }
 
         return projectRoot(for: yamlURL).appendingPathComponent(imagePath).path
+    }
+
+    /// Store a path relative to the project root when the file lives inside it; otherwise absolute.
+    static func makeRelativePath(_ url: URL, relativeTo sourceURL: URL?) -> String {
+        guard let sourceURL else { return url.path }
+        let root = projectRoot(for: sourceURL)
+        var rootPath = root.path
+        if !rootPath.hasSuffix("/") { rootPath += "/" }
+        guard url.path.hasPrefix(rootPath) else { return url.path }
+        return String(url.path.dropFirst(rootPath.count))
     }
 
     static func projectRoot(for coverFileURL: URL) -> URL {

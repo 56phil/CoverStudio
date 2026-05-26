@@ -41,7 +41,7 @@ struct InspectorView: View {
                     case .front: FrontTab(data: $data, sourceURL: sourceURL)
                     case .fonts: FontsTab(data: $data)
                     case .spine: SpineTab(data: $data)
-                    case .back: BackTab(data: $data)
+                    case .back: BackTab(data: $data, sourceURL: sourceURL)
                     case .yaml: YAMLView(data: data)
                     }
                 }
