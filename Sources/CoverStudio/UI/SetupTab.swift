@@ -53,6 +53,21 @@ struct SetupTab: View {
         return HCDefaults(trimWidth: w, trimHeight: h)
     }
 
+    private var activePageCount: Binding<Int> {
+        Binding(
+            get: { data.resolvedPageCount() },
+            set: { value in
+                let pageCount = max(value, 0)
+                if data.bindingType == .hc {
+                    data.hcPageCount = pageCount
+                } else {
+                    data.pbPageCount = pageCount
+                }
+                data.pageCount = pageCount
+            }
+        )
+    }
+
     var body: some View {
         Form {
             // ── Project Root ──
@@ -108,7 +123,7 @@ struct SetupTab: View {
 
             // ── Page ──
             Section("Page") {
-                TextField("Page count", value: $data.pageCount, format: .number)
+                TextField("\(data.bindingType.label) page count", value: activePageCount, format: .number)
                 Picker("Direction", selection: $data.readingDirection) {
                     ForEach(ReadingDirection.allCases, id: \.self) { Text($0.label).tag($0) }
                 }
@@ -118,6 +133,12 @@ struct SetupTab: View {
                 TextField("Guide X shift", value: $data.guideXOffsetInches, format: .number)
             }
 
+            Section("Layout") {
+                Button("Reset Default Locations", systemImage: "arrow.counterclockwise") {
+                    data.applyDefaultLocations()
+                }
+            }
+
             // ── Hardcover Template — always at the bottom ──
             if data.bindingType == .hc {
                 Section {
@@ -125,7 +146,7 @@ struct SetupTab: View {
                         .font(.caption).foregroundColor(.secondary)
 
                     TemplateField("Full cover width",
-                        value: Binding(get: { data.templateFullCoverWidth ?? hcDefaults.fullWidth(for: data.pageCount) },
+                        value: Binding(get: { data.templateFullCoverWidth ?? hcDefaults.fullWidth(for: data.resolvedPageCount()) },
                                        set: { data.templateFullCoverWidth = $0 }))
 
                     TemplateField("Full cover height",
@@ -141,7 +162,7 @@ struct SetupTab: View {
                                        set: { data.templateFrontCoverHeight = $0 }))
 
                     TemplateField("Spine width",
-                        value: Binding(get: { data.templateSpineWidth ?? hcDefaults.spineWidth(for: data.pageCount) },
+                        value: Binding(get: { data.templateSpineWidth ?? hcDefaults.spineWidth(for: data.resolvedPageCount()) },
                                        set: { data.templateSpineWidth = $0 }))
 
                     TemplateField("Hinge width",

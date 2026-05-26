@@ -21,10 +21,16 @@ struct CoverData: Codable, Equatable {
 
     // Page
     var pageCount: Int = 200
+    var pbPageCount: Int = 200
+    var hcPageCount: Int = 200
 
     // UI
     var uiUnits: Units = .inches
     var guideXOffsetInches: Double = 0.0
+
+    func resolvedPageCount() -> Int {
+        bindingType == .hc ? hcPageCount : pbPageCount
+    }
 
     // Front cover — image
     var frontCoverImage: String = ""
@@ -39,11 +45,18 @@ struct CoverData: Codable, Equatable {
     var authorName: String = ""
     var frontTitleOffsetXInches: Double = 0.0
     var frontTitleOffsetYInches: Double = 0.0
+    var frontTitleCenterX: Bool = false
+    var frontTitleCenterY: Bool = false
     var frontTitleScale: Double = 1.0
     var frontSubtitleOffsetXInches: Double = 0.0
     var frontSubtitleOffsetYInches: Double = 0.0
+    var frontSubtitleCenterX: Bool = false
+    var frontSubtitleCenterY: Bool = false
+    var frontSubtitleScale: Double = 1.0
     var frontAuthorOffsetXInches: Double = 0.0
     var frontAuthorOffsetYInches: Double = 0.0
+    var frontAuthorCenterX: Bool = false
+    var frontAuthorCenterY: Bool = false
     var frontAuthorScale: Double = 1.0
 
     // Binding-specific overrides (hc_ prefixed keys in legacy cover.md)
@@ -51,11 +64,18 @@ struct CoverData: Codable, Equatable {
     var hcFrontImageOffsetYInches: Double = 0.0
     var hcFrontTitleOffsetXInches: Double = 0.0
     var hcFrontTitleOffsetYInches: Double = 0.0
+    var hcFrontTitleCenterX: Bool = false
+    var hcFrontTitleCenterY: Bool = false
     var hcFrontSubtitleOffsetXInches: Double = 0.0
     var hcFrontSubtitleOffsetYInches: Double = 0.0
+    var hcFrontSubtitleCenterX: Bool = false
+    var hcFrontSubtitleCenterY: Bool = false
     var hcFrontAuthorOffsetXInches: Double = 0.0
     var hcFrontAuthorOffsetYInches: Double = 0.0
+    var hcFrontAuthorCenterX: Bool = false
+    var hcFrontAuthorCenterY: Bool = false
     var hcFrontTitleScale: Double = 1.0
+    var hcFrontSubtitleScale: Double = 1.0
     var hcFrontAuthorScale: Double = 1.0
 
     // Resolve offset based on current binding type (hc uses binding-specific overrides)
@@ -71,6 +91,14 @@ struct CoverData: Codable, Equatable {
         if bindingType == .hc { return hcFrontTitleScale }
         return frontTitleScale
     }
+    func resolvedTitleCenterX() -> Bool {
+        if bindingType == .hc { return hcFrontTitleCenterX }
+        return frontTitleCenterX
+    }
+    func resolvedTitleCenterY() -> Bool {
+        if bindingType == .hc { return hcFrontTitleCenterY }
+        return frontTitleCenterY
+    }
     func resolvedAuthorOffsetX() -> Double {
         if bindingType == .hc { return hcFrontAuthorOffsetXInches }
         return frontAuthorOffsetXInches
@@ -83,6 +111,14 @@ struct CoverData: Codable, Equatable {
         if bindingType == .hc { return hcFrontAuthorScale }
         return frontAuthorScale
     }
+    func resolvedAuthorCenterX() -> Bool {
+        if bindingType == .hc { return hcFrontAuthorCenterX }
+        return frontAuthorCenterX
+    }
+    func resolvedAuthorCenterY() -> Bool {
+        if bindingType == .hc { return hcFrontAuthorCenterY }
+        return frontAuthorCenterY
+    }
     func resolvedSubtitleOffsetX() -> Double {
         if bindingType == .hc { return hcFrontSubtitleOffsetXInches }
         return frontSubtitleOffsetXInches
@@ -90,6 +126,18 @@ struct CoverData: Codable, Equatable {
     func resolvedSubtitleOffsetY() -> Double {
         if bindingType == .hc { return hcFrontSubtitleOffsetYInches }
         return frontSubtitleOffsetYInches
+    }
+    func resolvedSubtitleScale() -> Double {
+        if bindingType == .hc { return hcFrontSubtitleScale }
+        return frontSubtitleScale
+    }
+    func resolvedSubtitleCenterX() -> Bool {
+        if bindingType == .hc { return hcFrontSubtitleCenterX }
+        return frontSubtitleCenterX
+    }
+    func resolvedSubtitleCenterY() -> Bool {
+        if bindingType == .hc { return hcFrontSubtitleCenterY }
+        return frontSubtitleCenterY
     }
     func resolvedImageOffsetX() -> Double {
         if bindingType == .hc { return hcFrontImageOffsetXInches }
@@ -104,7 +152,7 @@ struct CoverData: Codable, Equatable {
     var spineText: Bool = true
     var spineColor: String = "auto"
     var spineTextOffsetInches: Double = 0.0
-    var spineColorExtensionInches: Double = 0.25
+    var spineColorExtensionInches: Double = CoverLayoutDefaults.spineColorExtensionInches
     var spineTitleOffsetXInches: Double = 0.0
     var spineTitleOffsetYInches: Double = 0.0
     var spineAuthorOffsetXInches: Double = 0.0
@@ -114,6 +162,7 @@ struct CoverData: Codable, Equatable {
     var blurb: String = ""
     var blurbOffsetXInches: Double = 0.0
     var blurbOffsetYInches: Double = 0.0
+    var blurbWidthInches: Double = 0.0
     var quote: String = ""
     var quoteAttribution: String = ""
     var quoteOffsetXInches: Double = 0.0
@@ -123,13 +172,15 @@ struct CoverData: Codable, Equatable {
     var authorBio: String = ""
     var authorBioOffsetXInches: Double = 0.0
     var authorBioOffsetYInches: Double = 0.0
-    var authorBioParagraphGapPoints: Double = 8.0
+    var authorBioWidthInches: Double = 0.0
+    var authorBioParagraphGapPoints: Double = CoverLayoutDefaults.backAuthorBioParagraphGapPoints
 
     // Back cover — image
     var authorPhoto: String = ""
-    var authorPhotoScaleInches: Double = 1.18
+    var authorPhotoScaleInches: Double = CoverLayoutDefaults.backAuthorPhotoSizeInches
     var authorPhotoOffsetXInches: Double = 0.0
     var authorPhotoOffsetYInches: Double = 0.0
+    var authorPhotoShape: AuthorPhotoShape = .circle
 
     // Colors
     var colorTitle: String = "#daa520"
@@ -155,6 +206,66 @@ struct CoverData: Codable, Equatable {
     // Default init (required since custom init(from:) removes the auto-generated one)
     init() {}
 
+    mutating func applyDefaultLocations() {
+        frontCoverImageOffsetXInches = 0.0
+        frontCoverImageOffsetYInches = 0.0
+        frontTitleOffsetXInches = 0.0
+        frontTitleOffsetYInches = 0.0
+        frontTitleCenterX = false
+        frontTitleCenterY = false
+        frontTitleScale = 1.0
+        frontSubtitleOffsetXInches = 0.0
+        frontSubtitleOffsetYInches = 0.0
+        frontSubtitleCenterX = false
+        frontSubtitleCenterY = false
+        frontSubtitleScale = 1.0
+        frontAuthorOffsetXInches = 0.0
+        frontAuthorOffsetYInches = 0.0
+        frontAuthorCenterX = false
+        frontAuthorCenterY = false
+        frontAuthorScale = 1.0
+
+        hcFrontImageOffsetXInches = 0.0
+        hcFrontImageOffsetYInches = 0.0
+        hcFrontTitleOffsetXInches = 0.0
+        hcFrontTitleOffsetYInches = 0.0
+        hcFrontTitleCenterX = false
+        hcFrontTitleCenterY = false
+        hcFrontSubtitleOffsetXInches = 0.0
+        hcFrontSubtitleOffsetYInches = 0.0
+        hcFrontSubtitleCenterX = false
+        hcFrontSubtitleCenterY = false
+        hcFrontAuthorOffsetXInches = 0.0
+        hcFrontAuthorOffsetYInches = 0.0
+        hcFrontAuthorCenterX = false
+        hcFrontAuthorCenterY = false
+        hcFrontTitleScale = 1.0
+        hcFrontSubtitleScale = 1.0
+        hcFrontAuthorScale = 1.0
+
+        spineTextOffsetInches = 0.0
+        spineColorExtensionInches = CoverLayoutDefaults.spineColorExtensionInches
+        spineTitleOffsetXInches = 0.0
+        spineTitleOffsetYInches = 0.0
+        spineAuthorOffsetXInches = 0.0
+        spineAuthorOffsetYInches = 0.0
+
+        blurbOffsetXInches = 0.0
+        blurbOffsetYInches = 0.0
+        blurbWidthInches = 0.0
+        quoteOffsetXInches = 0.0
+        quoteOffsetYInches = 0.0
+        quoteAttributionOffsetXInches = 0.0
+        quoteAttributionOffsetYInches = 0.0
+        authorBioOffsetXInches = 0.0
+        authorBioOffsetYInches = 0.0
+        authorBioWidthInches = 0.0
+        authorBioParagraphGapPoints = CoverLayoutDefaults.backAuthorBioParagraphGapPoints
+        authorPhotoScaleInches = CoverLayoutDefaults.backAuthorPhotoSizeInches
+        authorPhotoOffsetXInches = 0.0
+        authorPhotoOffsetYInches = 0.0
+    }
+
     // ── Coding Keys — bridge snake_case (legacy Python) and camelCase (Swift) ──
 
     enum CodingKeys: String, CodingKey {
@@ -174,6 +285,8 @@ struct CoverData: Codable, Equatable {
         case customSafeMarginInches = "custom_safe_margin_inches"
 
         case pageCount = "page_count"
+        case pbPageCount = "pb_page_count"
+        case hcPageCount = "hc_page_count"
 
         case uiUnits = "ui_units"
         case guideXOffsetInches = "guide_x_offset_inches"
@@ -190,29 +303,59 @@ struct CoverData: Codable, Equatable {
         case authorName = "author_name"
         case frontTitleOffsetXInches = "front_title_offset_x_inches"
         case frontTitleOffsetYInches = "front_title_offset_y_inches"
+        case frontTitleCenterX = "front_title_center_x"
+        case frontTitleCenterY = "front_title_center_y"
+        case frontTitleCentered = "front_title_centered"
         case frontTitleScale = "front_title_scale"
         case frontSubtitleOffsetXInches = "front_subtitle_offset_x_inches"
         case frontSubtitleOffsetYInches = "front_subtitle_offset_y_inches"
+        case frontSubtitleCenterX = "front_subtitle_center_x"
+        case frontSubtitleCenterY = "front_subtitle_center_y"
+        case frontSubtitleCentered = "front_subtitle_centered"
+        case frontSubtitleScale = "front_subtitle_scale"
         case frontAuthorOffsetXInches = "front_author_offset_x_inches"
         case frontAuthorOffsetYInches = "front_author_offset_y_inches"
+        case frontAuthorCenterX = "front_author_center_x"
+        case frontAuthorCenterY = "front_author_center_y"
+        case frontAuthorCentered = "front_author_centered"
         case frontAuthorScale = "front_author_scale"
         case pbFrontTitleOffsetXInches = "pb_front_title_offset_x_inches"
         case pbFrontTitleOffsetYInches = "pb_front_title_offset_y_inches"
+        case pbFrontTitleCenterX = "pb_front_title_center_x"
+        case pbFrontTitleCenterY = "pb_front_title_center_y"
+        case pbFrontTitleCentered = "pb_front_title_centered"
         case pbFrontSubtitleOffsetXInches = "pb_front_subtitle_offset_x_inches"
         case pbFrontSubtitleOffsetYInches = "pb_front_subtitle_offset_y_inches"
+        case pbFrontSubtitleCenterX = "pb_front_subtitle_center_x"
+        case pbFrontSubtitleCenterY = "pb_front_subtitle_center_y"
+        case pbFrontSubtitleCentered = "pb_front_subtitle_centered"
+        case pbFrontSubtitleScale = "pb_front_subtitle_scale"
         case pbFrontAuthorOffsetXInches = "pb_front_author_offset_x_inches"
         case pbFrontAuthorOffsetYInches = "pb_front_author_offset_y_inches"
+        case pbFrontAuthorCenterX = "pb_front_author_center_x"
+        case pbFrontAuthorCenterY = "pb_front_author_center_y"
+        case pbFrontAuthorCentered = "pb_front_author_centered"
 
         // Binding-specific CodingKeys for legacy hc_ prefixed fields
         case hcFrontImageOffsetXInches = "hc_front_image_offset_x_inches"
         case hcFrontImageOffsetYInches = "hc_front_image_offset_y_inches"
         case hcFrontTitleOffsetXInches = "hc_front_title_offset_x_inches"
         case hcFrontTitleOffsetYInches = "hc_front_title_offset_y_inches"
+        case hcFrontTitleCenterX = "hc_front_title_center_x"
+        case hcFrontTitleCenterY = "hc_front_title_center_y"
+        case hcFrontTitleCentered = "hc_front_title_centered"
         case hcFrontSubtitleOffsetXInches = "hc_front_subtitle_offset_x_inches"
         case hcFrontSubtitleOffsetYInches = "hc_front_subtitle_offset_y_inches"
+        case hcFrontSubtitleCenterX = "hc_front_subtitle_center_x"
+        case hcFrontSubtitleCenterY = "hc_front_subtitle_center_y"
+        case hcFrontSubtitleCentered = "hc_front_subtitle_centered"
         case hcFrontAuthorOffsetXInches = "hc_front_author_offset_x_inches"
         case hcFrontAuthorOffsetYInches = "hc_front_author_offset_y_inches"
+        case hcFrontAuthorCenterX = "hc_front_author_center_x"
+        case hcFrontAuthorCenterY = "hc_front_author_center_y"
+        case hcFrontAuthorCentered = "hc_front_author_centered"
         case hcFrontTitleScale = "hc_front_title_scale"
+        case hcFrontSubtitleScale = "hc_front_subtitle_scale"
         case hcFrontAuthorScale = "hc_front_author_scale"
         case pbSpineTitleOffsetXInches = "pb_spine_title_offset_x_inches"
         case pbSpineTitleOffsetYInches = "pb_spine_title_offset_y_inches"
@@ -226,6 +369,9 @@ struct CoverData: Codable, Equatable {
         case pbBackBlurbOffsetYInches = "pb_back_blurb_offset_y_inches"
         case hcBackBlurbOffsetXInches = "hc_back_blurb_offset_x_inches"
         case hcBackBlurbOffsetYInches = "hc_back_blurb_offset_y_inches"
+        case blurbWidthInches = "blurb_width_inches"
+        case pbBackBlurbWidthInches = "pb_back_blurb_width_inches"
+        case hcBackBlurbWidthInches = "hc_back_blurb_width_inches"
         case pbBackQuoteOffsetXInches = "pb_back_quote_offset_x_inches"
         case pbBackQuoteOffsetYInches = "pb_back_quote_offset_y_inches"
         case hcBackQuoteOffsetXInches = "hc_back_quote_offset_x_inches"
@@ -235,6 +381,9 @@ struct CoverData: Codable, Equatable {
         case hcBackAuthorBioOffsetXInches = "hc_back_author_bio_offset_x_inches"
         case hcBackAuthorBioOffsetYInches = "hc_back_author_bio_offset_y_inches"
         case backAuthorBioOffsetYInches = "back_author_bio_offset_y_inches"
+        case authorBioWidthInches = "author_bio_width_inches"
+        case pbBackAuthorBioWidthInches = "pb_back_author_bio_width_inches"
+        case hcBackAuthorBioWidthInches = "hc_back_author_bio_width_inches"
         case backAuthorBioParagraphGapPoints = "back_author_bio_paragraph_gap_points"
         case pbBackAuthorImageOffsetXInches = "pb_back_author_image_offset_x_inches"
         case pbBackAuthorImageOffsetYInches = "pb_back_author_image_offset_y_inches"
@@ -270,6 +419,8 @@ struct CoverData: Codable, Equatable {
         case authorPhotoScaleInches = "author_photo_scale_inches"
         case authorPhotoOffsetXInches = "author_photo_offset_x_inches"
         case authorPhotoOffsetYInches = "author_photo_offset_y_inches"
+        case authorPhotoShape = "author_photo_shape"
+        case authorPhotoCircular = "author_photo_circular"
 
         case colorTitle = "color_title"
         case colorAccent = "color_accent"
@@ -311,6 +462,8 @@ struct CoverData: Codable, Equatable {
         customSafeMarginInches = container.doubleOrZero(.customSafeMarginInches)
 
         pageCount = try container.decodeIfPresent(Int.self, forKey: .pageCount) ?? 200
+        pbPageCount = try container.decodeIfPresent(Int.self, forKey: .pbPageCount) ?? pageCount
+        hcPageCount = try container.decodeIfPresent(Int.self, forKey: .hcPageCount) ?? pageCount
 
         uiUnits = try container.decodeIfPresent(Units.self, forKey: .uiUnits) ?? .inches
         guideXOffsetInches = container.doubleOrZero(.guideXOffsetInches)
@@ -346,6 +499,20 @@ struct CoverData: Codable, Equatable {
             hardcover: .frontTitleOffsetYInches,
             bindingType: .pb
         )
+        frontTitleCenterX = container.bindingBool(
+            canonical: .frontTitleCenterX,
+            paperback: .pbFrontTitleCenterX,
+            hardcover: .frontTitleCenterX,
+            bindingType: .pb,
+            fallback: .frontTitleCentered
+        )
+        frontTitleCenterY = container.bindingBool(
+            canonical: .frontTitleCenterY,
+            paperback: .pbFrontTitleCenterY,
+            hardcover: .frontTitleCenterY,
+            bindingType: .pb,
+            fallback: .frontTitleCentered
+        )
         frontTitleScale = container.doubleOrOne(.frontTitleScale)
         frontSubtitleOffsetXInches = container.bindingDouble(
             canonical: .frontSubtitleOffsetXInches,
@@ -359,6 +526,27 @@ struct CoverData: Codable, Equatable {
             hardcover: .frontSubtitleOffsetYInches,
             bindingType: .pb
         )
+        frontSubtitleCenterX = container.bindingBool(
+            canonical: .frontSubtitleCenterX,
+            paperback: .pbFrontSubtitleCenterX,
+            hardcover: .frontSubtitleCenterX,
+            bindingType: .pb,
+            fallback: .frontSubtitleCentered
+        )
+        frontSubtitleCenterY = container.bindingBool(
+            canonical: .frontSubtitleCenterY,
+            paperback: .pbFrontSubtitleCenterY,
+            hardcover: .frontSubtitleCenterY,
+            bindingType: .pb,
+            fallback: .frontSubtitleCentered
+        )
+        frontSubtitleScale = container.bindingDoubleOrDefault(
+            canonical: .frontSubtitleScale,
+            paperback: .pbFrontSubtitleScale,
+            hardcover: .frontSubtitleScale,
+            bindingType: .pb,
+            defaultValue: 1.0
+        )
         frontAuthorOffsetXInches = container.bindingDouble(
             canonical: .frontAuthorOffsetXInches,
             paperback: .pbFrontAuthorOffsetXInches,
@@ -371,23 +559,47 @@ struct CoverData: Codable, Equatable {
             hardcover: .frontAuthorOffsetYInches,
             bindingType: .pb
         )
+        frontAuthorCenterX = container.bindingBool(
+            canonical: .frontAuthorCenterX,
+            paperback: .pbFrontAuthorCenterX,
+            hardcover: .frontAuthorCenterX,
+            bindingType: .pb,
+            fallback: .frontAuthorCentered
+        )
+        frontAuthorCenterY = container.bindingBool(
+            canonical: .frontAuthorCenterY,
+            paperback: .pbFrontAuthorCenterY,
+            hardcover: .frontAuthorCenterY,
+            bindingType: .pb,
+            fallback: .frontAuthorCentered
+        )
         frontAuthorScale = container.doubleOrOne(.frontAuthorScale)
 
         hcFrontImageOffsetXInches = container.doubleOrZero(.hcFrontImageOffsetXInches)
         hcFrontImageOffsetYInches = container.doubleOrZero(.hcFrontImageOffsetYInches)
         hcFrontTitleOffsetXInches = container.doubleOrZero(.hcFrontTitleOffsetXInches)
         hcFrontTitleOffsetYInches = container.doubleOrZero(.hcFrontTitleOffsetYInches)
+        hcFrontTitleCenterX = container.boolOrDefault(.hcFrontTitleCenterX, defaultValue: container.boolOrDefault(.hcFrontTitleCentered, defaultValue: false))
+        hcFrontTitleCenterY = container.boolOrDefault(.hcFrontTitleCenterY, defaultValue: container.boolOrDefault(.hcFrontTitleCentered, defaultValue: false))
         hcFrontSubtitleOffsetXInches = container.doubleOrZero(.hcFrontSubtitleOffsetXInches)
         hcFrontSubtitleOffsetYInches = container.doubleOrZero(.hcFrontSubtitleOffsetYInches)
+        hcFrontSubtitleCenterX = container.boolOrDefault(.hcFrontSubtitleCenterX, defaultValue: container.boolOrDefault(.hcFrontSubtitleCentered, defaultValue: false))
+        hcFrontSubtitleCenterY = container.boolOrDefault(.hcFrontSubtitleCenterY, defaultValue: container.boolOrDefault(.hcFrontSubtitleCentered, defaultValue: false))
         hcFrontAuthorOffsetXInches = container.doubleOrZero(.hcFrontAuthorOffsetXInches)
         hcFrontAuthorOffsetYInches = container.doubleOrZero(.hcFrontAuthorOffsetYInches)
+        hcFrontAuthorCenterX = container.boolOrDefault(.hcFrontAuthorCenterX, defaultValue: container.boolOrDefault(.hcFrontAuthorCentered, defaultValue: false))
+        hcFrontAuthorCenterY = container.boolOrDefault(.hcFrontAuthorCenterY, defaultValue: container.boolOrDefault(.hcFrontAuthorCentered, defaultValue: false))
         hcFrontTitleScale = container.doubleOrOne(.hcFrontTitleScale)
+        hcFrontSubtitleScale = container.doubleOrDefault(.hcFrontSubtitleScale, defaultValue: 1.0)
         hcFrontAuthorScale = container.doubleOrOne(.hcFrontAuthorScale)
 
         spineText = container.boolOrTrue(.spineText)
         spineColor = container.stringOrAuto(.spineColor)
         spineTextOffsetInches = container.doubleOrZero(.spineTextOffsetInches)
-        spineColorExtensionInches = container.doubleOrZero(.spineColorExtensionInches)
+        spineColorExtensionInches = container.doubleOrDefault(
+            .spineColorExtensionInches,
+            defaultValue: CoverLayoutDefaults.spineColorExtensionInches
+        )
         spineTitleOffsetXInches = container.bindingDouble(
             canonical: .spineTitleOffsetXInches,
             paperback: .pbSpineTitleOffsetXInches,
@@ -426,6 +638,12 @@ struct CoverData: Codable, Equatable {
             hardcover: .hcBackBlurbOffsetYInches,
             bindingType: bindingType
         )
+        blurbWidthInches = container.bindingDouble(
+            canonical: .blurbWidthInches,
+            paperback: .pbBackBlurbWidthInches,
+            hardcover: .hcBackBlurbWidthInches,
+            bindingType: bindingType
+        )
         quote = container.stringOrEmpty(.quote)
         quoteAttribution = container.stringOrEmpty(.quoteAttribution)
         quoteOffsetXInches = container.bindingDouble(
@@ -456,13 +674,25 @@ struct CoverData: Codable, Equatable {
             bindingType: bindingType,
             fallback: .backAuthorBioOffsetYInches
         )
+        authorBioWidthInches = container.bindingDouble(
+            canonical: .authorBioWidthInches,
+            paperback: .pbBackAuthorBioWidthInches,
+            hardcover: .hcBackAuthorBioWidthInches,
+            bindingType: bindingType
+        )
         authorBioParagraphGapPoints = container.doubleOrDefault(
             .authorBioParagraphGapPoints,
-            defaultValue: container.doubleOrDefault(.backAuthorBioParagraphGapPoints, defaultValue: 8.0)
+            defaultValue: container.doubleOrDefault(
+                .backAuthorBioParagraphGapPoints,
+                defaultValue: CoverLayoutDefaults.backAuthorBioParagraphGapPoints
+            )
         )
 
         authorPhoto = container.stringOrEmpty(.authorPhoto)
-        authorPhotoScaleInches = container.doubleOrDefault(.authorPhotoScaleInches, defaultValue: 1.18)
+        authorPhotoScaleInches = container.doubleOrDefault(
+            .authorPhotoScaleInches,
+            defaultValue: CoverLayoutDefaults.backAuthorPhotoSizeInches
+        )
         authorPhotoOffsetXInches = container.bindingDouble(
             canonical: .authorPhotoOffsetXInches,
             paperback: .pbBackAuthorImageOffsetXInches,
@@ -477,11 +707,13 @@ struct CoverData: Codable, Equatable {
             bindingType: bindingType,
             fallback: .backAuthorImageOffsetYInches
         )
+        authorPhotoShape = try container.decodeIfPresent(AuthorPhotoShape.self, forKey: .authorPhotoShape)
+            ?? (container.boolOrDefault(.authorPhotoCircular, defaultValue: true) ? .circle : .square)
 
-        colorTitle = container.stringOrEmpty(.colorTitle)
-        colorAccent = container.stringOrEmpty(.colorAccent)
-        colorBody = container.stringOrEmpty(.colorBody)
-        colorSoft = container.stringOrEmpty(.colorSoft)
+        colorTitle = container.stringOrDefault(.colorTitle, defaultValue: "#daa520")
+        colorAccent = container.stringOrDefault(.colorAccent, defaultValue: "#eec448")
+        colorBody = container.stringOrDefault(.colorBody, defaultValue: "#efe6d4")
+        colorSoft = container.stringOrDefault(.colorSoft, defaultValue: "#c6bca9")
 
         fontTitle = container.stringOrEmpty(.fontTitle)
         fontBold = container.stringOrEmpty(.fontBold)
@@ -512,7 +744,9 @@ struct CoverData: Codable, Equatable {
         try container.encode(customSpineWidthInches, forKey: .customSpineWidthInches)
         try container.encode(customBleedInches, forKey: .customBleedInches)
         try container.encode(customSafeMarginInches, forKey: .customSafeMarginInches)
-        try container.encode(pageCount, forKey: .pageCount)
+        try container.encode(resolvedPageCount(), forKey: .pageCount)
+        try container.encode(pbPageCount, forKey: .pbPageCount)
+        try container.encode(hcPageCount, forKey: .hcPageCount)
         try container.encode(uiUnits, forKey: .uiUnits)
         try container.encode(guideXOffsetInches, forKey: .guideXOffsetInches)
         try container.encode(frontCoverImage, forKey: .frontCoverImage)
@@ -529,25 +763,46 @@ struct CoverData: Codable, Equatable {
         try container.encode(authorName, forKey: .authorName)
         try container.encode(frontTitleOffsetXInches, forKey: .frontTitleOffsetXInches)
         try container.encode(frontTitleOffsetYInches, forKey: .frontTitleOffsetYInches)
+        try container.encode(frontTitleCenterX, forKey: .frontTitleCenterX)
+        try container.encode(frontTitleCenterY, forKey: .frontTitleCenterY)
         try container.encode(frontTitleScale, forKey: .frontTitleScale)
         try container.encode(frontTitleOffsetXInches, forKey: .pbFrontTitleOffsetXInches)
         try container.encode(frontTitleOffsetYInches, forKey: .pbFrontTitleOffsetYInches)
+        try container.encode(frontTitleCenterX, forKey: .pbFrontTitleCenterX)
+        try container.encode(frontTitleCenterY, forKey: .pbFrontTitleCenterY)
         try container.encode(hcFrontTitleOffsetXInches, forKey: .hcFrontTitleOffsetXInches)
         try container.encode(hcFrontTitleOffsetYInches, forKey: .hcFrontTitleOffsetYInches)
+        try container.encode(hcFrontTitleCenterX, forKey: .hcFrontTitleCenterX)
+        try container.encode(hcFrontTitleCenterY, forKey: .hcFrontTitleCenterY)
         try container.encode(hcFrontTitleScale, forKey: .hcFrontTitleScale)
         try container.encode(frontSubtitleOffsetXInches, forKey: .frontSubtitleOffsetXInches)
         try container.encode(frontSubtitleOffsetYInches, forKey: .frontSubtitleOffsetYInches)
+        try container.encode(frontSubtitleCenterX, forKey: .frontSubtitleCenterX)
+        try container.encode(frontSubtitleCenterY, forKey: .frontSubtitleCenterY)
+        try container.encode(frontSubtitleScale, forKey: .frontSubtitleScale)
         try container.encode(frontSubtitleOffsetXInches, forKey: .pbFrontSubtitleOffsetXInches)
         try container.encode(frontSubtitleOffsetYInches, forKey: .pbFrontSubtitleOffsetYInches)
+        try container.encode(frontSubtitleCenterX, forKey: .pbFrontSubtitleCenterX)
+        try container.encode(frontSubtitleCenterY, forKey: .pbFrontSubtitleCenterY)
+        try container.encode(frontSubtitleScale, forKey: .pbFrontSubtitleScale)
         try container.encode(hcFrontSubtitleOffsetXInches, forKey: .hcFrontSubtitleOffsetXInches)
         try container.encode(hcFrontSubtitleOffsetYInches, forKey: .hcFrontSubtitleOffsetYInches)
+        try container.encode(hcFrontSubtitleCenterX, forKey: .hcFrontSubtitleCenterX)
+        try container.encode(hcFrontSubtitleCenterY, forKey: .hcFrontSubtitleCenterY)
+        try container.encode(hcFrontSubtitleScale, forKey: .hcFrontSubtitleScale)
         try container.encode(frontAuthorOffsetXInches, forKey: .frontAuthorOffsetXInches)
         try container.encode(frontAuthorOffsetYInches, forKey: .frontAuthorOffsetYInches)
+        try container.encode(frontAuthorCenterX, forKey: .frontAuthorCenterX)
+        try container.encode(frontAuthorCenterY, forKey: .frontAuthorCenterY)
         try container.encode(frontAuthorScale, forKey: .frontAuthorScale)
         try container.encode(frontAuthorOffsetXInches, forKey: .pbFrontAuthorOffsetXInches)
         try container.encode(frontAuthorOffsetYInches, forKey: .pbFrontAuthorOffsetYInches)
+        try container.encode(frontAuthorCenterX, forKey: .pbFrontAuthorCenterX)
+        try container.encode(frontAuthorCenterY, forKey: .pbFrontAuthorCenterY)
         try container.encode(hcFrontAuthorOffsetXInches, forKey: .hcFrontAuthorOffsetXInches)
         try container.encode(hcFrontAuthorOffsetYInches, forKey: .hcFrontAuthorOffsetYInches)
+        try container.encode(hcFrontAuthorCenterX, forKey: .hcFrontAuthorCenterX)
+        try container.encode(hcFrontAuthorCenterY, forKey: .hcFrontAuthorCenterY)
         try container.encode(hcFrontAuthorScale, forKey: .hcFrontAuthorScale)
         try container.encode(spineText, forKey: .spineText)
         try container.encode(spineColor, forKey: .spineColor)
@@ -560,20 +815,55 @@ struct CoverData: Codable, Equatable {
         try container.encode(blurb, forKey: .blurb)
         try container.encode(blurbOffsetXInches, forKey: .blurbOffsetXInches)
         try container.encode(blurbOffsetYInches, forKey: .blurbOffsetYInches)
+        try container.encode(blurbWidthInches, forKey: .blurbWidthInches)
+        if bindingType == .hc {
+            try container.encode(blurbOffsetXInches, forKey: .hcBackBlurbOffsetXInches)
+            try container.encode(blurbOffsetYInches, forKey: .hcBackBlurbOffsetYInches)
+            try container.encode(blurbWidthInches, forKey: .hcBackBlurbWidthInches)
+        } else {
+            try container.encode(blurbOffsetXInches, forKey: .pbBackBlurbOffsetXInches)
+            try container.encode(blurbOffsetYInches, forKey: .pbBackBlurbOffsetYInches)
+            try container.encode(blurbWidthInches, forKey: .pbBackBlurbWidthInches)
+        }
         try container.encode(quote, forKey: .quote)
         try container.encode(quoteAttribution, forKey: .quoteAttribution)
         try container.encode(quoteOffsetXInches, forKey: .quoteOffsetXInches)
         try container.encode(quoteOffsetYInches, forKey: .quoteOffsetYInches)
+        if bindingType == .hc {
+            try container.encode(quoteOffsetXInches, forKey: .hcBackQuoteOffsetXInches)
+            try container.encode(quoteOffsetYInches, forKey: .hcBackQuoteOffsetYInches)
+        } else {
+            try container.encode(quoteOffsetXInches, forKey: .pbBackQuoteOffsetXInches)
+            try container.encode(quoteOffsetYInches, forKey: .pbBackQuoteOffsetYInches)
+        }
         try container.encode(quoteAttributionOffsetXInches, forKey: .quoteAttributionOffsetXInches)
         try container.encode(quoteAttributionOffsetYInches, forKey: .quoteAttributionOffsetYInches)
         try container.encode(authorBio, forKey: .authorBio)
         try container.encode(authorBioOffsetXInches, forKey: .authorBioOffsetXInches)
         try container.encode(authorBioOffsetYInches, forKey: .authorBioOffsetYInches)
+        try container.encode(authorBioWidthInches, forKey: .authorBioWidthInches)
+        if bindingType == .hc {
+            try container.encode(authorBioOffsetXInches, forKey: .hcBackAuthorBioOffsetXInches)
+            try container.encode(authorBioOffsetYInches, forKey: .hcBackAuthorBioOffsetYInches)
+            try container.encode(authorBioWidthInches, forKey: .hcBackAuthorBioWidthInches)
+        } else {
+            try container.encode(authorBioOffsetXInches, forKey: .pbBackAuthorBioOffsetXInches)
+            try container.encode(authorBioOffsetYInches, forKey: .pbBackAuthorBioOffsetYInches)
+            try container.encode(authorBioWidthInches, forKey: .pbBackAuthorBioWidthInches)
+        }
         try container.encode(authorBioParagraphGapPoints, forKey: .authorBioParagraphGapPoints)
         try container.encode(authorPhoto, forKey: .authorPhoto)
         try container.encode(authorPhotoScaleInches, forKey: .authorPhotoScaleInches)
         try container.encode(authorPhotoOffsetXInches, forKey: .authorPhotoOffsetXInches)
         try container.encode(authorPhotoOffsetYInches, forKey: .authorPhotoOffsetYInches)
+        try container.encode(authorPhotoShape, forKey: .authorPhotoShape)
+        if bindingType == .hc {
+            try container.encode(authorPhotoOffsetXInches, forKey: .hcBackAuthorImageOffsetXInches)
+            try container.encode(authorPhotoOffsetYInches, forKey: .hcBackAuthorImageOffsetYInches)
+        } else {
+            try container.encode(authorPhotoOffsetXInches, forKey: .pbBackAuthorImageOffsetXInches)
+            try container.encode(authorPhotoOffsetYInches, forKey: .pbBackAuthorImageOffsetYInches)
+        }
         try container.encode(colorTitle, forKey: .colorTitle)
         try container.encode(colorAccent, forKey: .colorAccent)
         try container.encode(colorBody, forKey: .colorBody)
@@ -612,6 +902,16 @@ extension KeyedDecodingContainer where Key == CoverData.CodingKeys {
         return defaultValue
     }
 
+    func optionalDouble(_ key: Key) -> Double? {
+        if let d = try? decodeIfPresent(Double.self, forKey: key) { return d }
+        if let s = try? decodeIfPresent(String.self, forKey: key) {
+            let trimmed = s.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty { return nil }
+            return Double(trimmed)
+        }
+        return nil
+    }
+
     func stringOrEmpty(_ key: Key) -> String {
         (try? decodeIfPresent(String.self, forKey: key)) ?? ""
     }
@@ -621,6 +921,11 @@ extension KeyedDecodingContainer where Key == CoverData.CodingKeys {
         return s.isEmpty ? "auto" : s
     }
 
+    func stringOrDefault(_ key: Key, defaultValue: String) -> String {
+        let s = stringOrEmpty(key).trimmingCharacters(in: .whitespacesAndNewlines)
+        return s.isEmpty ? defaultValue : s
+    }
+
     func boolOrFalse(_ key: Key) -> Bool {
         (try? decodeIfPresent(Bool.self, forKey: key)) ?? false
     }
@@ -628,6 +933,30 @@ extension KeyedDecodingContainer where Key == CoverData.CodingKeys {
     func boolOrTrue(_ key: Key) -> Bool {
         if let b = try? decodeIfPresent(Bool.self, forKey: key) { return b }
         return true
+    }
+
+    func boolOrDefault(_ key: Key, defaultValue: Bool) -> Bool {
+        if let b = try? decodeIfPresent(Bool.self, forKey: key) { return b }
+        if let s = try? decodeIfPresent(String.self, forKey: key) {
+            switch s.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+            case "true", "yes", "1": return true
+            case "false", "no", "0": return false
+            default: break
+            }
+        }
+        return defaultValue
+    }
+
+    func optionalBool(_ key: Key) -> Bool? {
+        if let b = try? decodeIfPresent(Bool.self, forKey: key) { return b }
+        if let s = try? decodeIfPresent(String.self, forKey: key) {
+            switch s.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+            case "true", "yes", "1": return true
+            case "false", "no", "0": return false
+            default: return nil
+            }
+        }
+        return nil
     }
 
     func decodeTrimPreset(forKey key: Key) throws -> TrimPreset? {
@@ -647,16 +976,57 @@ extension KeyedDecodingContainer where Key == CoverData.CodingKeys {
         fallback: Key? = nil
     ) -> Double {
         let bindingKey = bindingType == .hc ? hardcover : paperback
-        if contains(bindingKey) {
-            return doubleOrZero(bindingKey)
+        if let value = optionalDouble(bindingKey) {
+            return value
         }
-        if contains(canonical) {
-            return doubleOrZero(canonical)
+        if let value = optionalDouble(canonical) {
+            return value
         }
-        if let fallback, contains(fallback) {
-            return doubleOrZero(fallback)
+        if let fallback, let value = optionalDouble(fallback) {
+            return value
         }
         return 0.0
+    }
+
+    func bindingDoubleOrDefault(
+        canonical: Key,
+        paperback: Key,
+        hardcover: Key,
+        bindingType: BindingType,
+        fallback: Key? = nil,
+        defaultValue: Double
+    ) -> Double {
+        let bindingKey = bindingType == .hc ? hardcover : paperback
+        if let value = optionalDouble(bindingKey) {
+            return value
+        }
+        if let value = optionalDouble(canonical) {
+            return value
+        }
+        if let fallback, let value = optionalDouble(fallback) {
+            return value
+        }
+        return defaultValue
+    }
+
+    func bindingBool(
+        canonical: Key,
+        paperback: Key,
+        hardcover: Key,
+        bindingType: BindingType,
+        fallback: Key? = nil
+    ) -> Bool {
+        let bindingKey = bindingType == .hc ? hardcover : paperback
+        if let value = optionalBool(bindingKey) {
+            return value
+        }
+        if let value = optionalBool(canonical) {
+            return value
+        }
+        if let fallback, let value = optionalBool(fallback) {
+            return value
+        }
+        return false
     }
 }
 

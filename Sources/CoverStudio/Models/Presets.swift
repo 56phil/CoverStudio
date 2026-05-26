@@ -127,3 +127,17 @@ enum Units: String, Codable, CaseIterable {
         }
     }
 }
+
+enum AuthorPhotoShape: String, Codable, CaseIterable {
+    case circle
+    case square
+    case raw
+
+    var label: String {
+        switch self {
+        case .circle: "Circle"
+        case .square: "Square"
+        case .raw: "Raw"
+        }
+    }
+}

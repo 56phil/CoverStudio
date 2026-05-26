@@ -31,7 +31,7 @@ struct CoverStudioApp: App {
 
     func openDocument() {
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.yaml, UTType(filenameExtension: "yml") ?? .yaml, .json]
+        panel.allowedContentTypes = ProjectManager.coverContentTypes
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false

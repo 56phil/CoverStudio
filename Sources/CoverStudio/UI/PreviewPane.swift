@@ -25,7 +25,7 @@ struct PreviewPane: View {
         VStack(spacing: 0) {
             // Zoom toolbar
             HStack(spacing: 8) {
-                Button("Fit") { zoom = 0 }
+                Button("Fit Preview") { zoom = 0 }
                     .buttonStyle(.borderless)
                     .font(.caption.weight(zoom == 0 ? .bold : .regular))
                     .foregroundColor(zoom == 0 ? .accentColor : .secondary)

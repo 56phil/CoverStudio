@@ -54,6 +54,18 @@ The script creates:
 .build/release/CoverStudio.app
 ```
 
+To package a downloadable DMG for a GitHub Release:
+
+```sh
+./scripts/package-release.sh 0.1.0
+```
+
+For public distribution, sign and notarize the DMG with a Developer ID
+certificate. See `RELEASE.md` for the release checklist.
+
+Unsigned early-test builds can still be shared with trusted testers. See
+`UNSIGNED_INSTALL.md` for the first-launch steps macOS may require.
+
 ## Project Layout
 
 A typical book project can look like this:
