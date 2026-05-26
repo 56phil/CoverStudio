@@ -8,6 +8,8 @@ struct CoverRenderer {
     let geometry: CoverGeometry
     let sourceURL: URL?
 
+    private static let fallbackSpineColor = NSColor(red: 18/255, green: 43/255, blue: 34/255, alpha: 1)
+
     init(data: CoverData, geometry: CoverGeometry, sourceURL: URL? = nil) {
         self.data = data
         self.geometry = geometry
@@ -19,7 +21,7 @@ struct CoverRenderer {
     func deriveSpineColor(from imagePath: String) -> NSColor {
         guard let image = NSImage(contentsOfFile: imagePath),
               let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
-            return NSColor(red: 18/255, green: 43/255, blue: 34/255, alpha: 1)
+            return Self.fallbackSpineColor
         }
         let thumbSize = 40
         guard let thumbCtx = CGContext(
@@ -27,9 +29,9 @@ struct CoverRenderer {
             bitsPerComponent: 8, bytesPerRow: thumbSize * 4,
             space: CGColorSpace(name: CGColorSpace.sRGB)!,
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else { return NSColor(red: 18/255, green: 43/255, blue: 34/255, alpha: 1) }
+        ) else { return Self.fallbackSpineColor }
         thumbCtx.draw(cgImage, in: CGRect(x: 0, y: 0, width: thumbSize, height: thumbSize))
-        guard let thumbData = thumbCtx.data else { return NSColor(red: 18/255, green: 43/255, blue: 34/255, alpha: 1) }
+        guard let thumbData = thumbCtx.data else { return Self.fallbackSpineColor }
         let pixels = thumbData.bindMemory(to: UInt8.self, capacity: thumbSize * thumbSize * 4)
         var seen: [String: (count: Int, color: (Int, Int, Int))] = [:]
         for i in stride(from: 0, to: thumbSize * thumbSize * 4, by: 4) {
@@ -58,7 +60,7 @@ struct CoverRenderer {
     func resolveSpineColor() -> NSColor {
         let v = data.spineColor.trimmingCharacters(in: .whitespaces)
         if v.isEmpty || v.lowercased() == "auto" {
-            if data.frontCoverImage.isEmpty { return NSColor(red: 18/255, green: 43/255, blue: 34/255, alpha: 1) }
+            if data.frontCoverImage.isEmpty { return Self.fallbackSpineColor }
             return deriveSpineColor(from: resolvedAssetPath(data.frontCoverImage))
         }
         return NSColor(hex: v)
@@ -115,35 +117,38 @@ struct CoverRenderer {
 
         // Blurb — starts at top of safe area, flows down (Pillow y increases downward, CG y decreases upward)
         let blurb = data.blurb.trimmingCharacters(in: .whitespaces)
-        var blurbPillowBottom: CGFloat = CGFloat(g.trimTop) + CGFloat(CoverGeometry.px(0.5))
+        var blurbPillowBottom = CGFloat(g.trimTop) + CGFloat(CoverGeometry.px(CoverLayoutDefaults.backBlurbTopInches))
         if !blurb.isEmpty {
-            let bx = safeX + CGFloat(data.blurbOffsetXInches) * 300
-            let byPillow = CGFloat(g.trimTop) + CGFloat(CoverGeometry.px(0.5)) + CGFloat(data.blurbOffsetYInches) * 300
+            let bx = safeX + CGFloat(data.blurbOffsetXInches) * CGFloat(geometry.dpi)
+            let byPillow = CGFloat(g.trimTop) + CGFloat(CoverGeometry.px(CoverLayoutDefaults.backBlurbTopInches)) + CGFloat(data.blurbOffsetYInches) * CGFloat(geometry.dpi)
             let maxYPillow = CGFloat(g.trimBottom - g.safe) - 80
-            blurbPillowBottom = drawWrappedLines(ctx: ctx, text: blurb, x: bx,
-                yStart: cgYf(byPillow), font: CTFontCreateWithName("Arial" as CFString, 43, nil),
-                color: NSColor(hex: data.colorBody), maxWidth: maxW,
-                leading: 55, paragraphGap: 34, maxY: cgYf(maxYPillow))
+            let blurbMaxWidth = data.blurbWidthInches > 0
+                ? CGFloat(CoverGeometry.px(data.blurbWidthInches))
+                : maxW
+            blurbPillowBottom = drawWrappedTextBlock(ctx: ctx, text: blurb, x: bx,
+                pillowTop: byPillow, font: CTFontCreateWithName("Arial" as CFString, 43, nil),
+                color: NSColor(hex: data.colorBody), maxWidth: min(maxW, blurbMaxWidth),
+                lineSpacing: 6, paragraphSpacing: 20, maxPillowBottom: maxYPillow)
         }
 
         // Quote — centered below blurb
         let quote = data.quote.trimmingCharacters(in: .whitespaces)
         if !quote.isEmpty {
-            let qcx = CGFloat(g.effectiveBackLeft) + CGFloat(g.frontWidth) / 2 + CGFloat(data.quoteOffsetXInches) * 300
+            let qcx = CGFloat(g.effectiveBackLeft) + CGFloat(g.frontWidth) / 2 + CGFloat(data.quoteOffsetXInches) * CGFloat(geometry.dpi)
             let font = CTFontCreateWithName("Arial" as CFString,
                 fitFontSize(text: "\u{201C}\(quote)\u{201D}", maxWidth: maxW, maxSize: 38, minSize: 14, fontName: "Arial"), nil)
             let color = NSColor(hex: data.colorAccent)
-            let qyCG = blurbPillowBottom + 42 + CGFloat(data.quoteOffsetYInches) * 300
-            _ = drawCenteredText(ctx: ctx, text: "\u{201C}\(quote)\u{201D}", font: font, color: color, centerX: qcx, y: cgYf(qyCG), shadow: false)
+            let quotePillowY = blurbPillowBottom + CGFloat(CoverGeometry.px(CoverLayoutDefaults.backQuoteGapInches)) + CGFloat(data.quoteOffsetYInches) * CGFloat(geometry.dpi)
+            _ = drawCenteredText(ctx: ctx, text: "\u{201C}\(quote)\u{201D}", font: font, color: color, centerX: qcx, y: cgYf(quotePillowY), shadow: false)
 
             let attr = data.quoteAttribution.trimmingCharacters(in: .whitespaces)
             if !attr.isEmpty {
                 let afont = CTFontCreateWithName("Arial" as CFString, 30, nil)
                 let acolor = NSColor(hex: data.colorSoft)
                 let atext = attr.hasPrefix("-") ? attr : "- \(attr)"
-                let ax = qcx + CGFloat(data.quoteAttributionOffsetXInches) * 300
-                let ayCG = qyCG + 60 + CGFloat(data.quoteAttributionOffsetYInches) * 300
-                _ = drawCenteredText(ctx: ctx, text: atext, font: afont, color: acolor, centerX: ax, y: cgYf(ayCG), shadow: false)
+                let ax = qcx + CGFloat(data.quoteAttributionOffsetXInches) * CGFloat(geometry.dpi)
+                let attributionPillowY = quotePillowY + CGFloat(CoverGeometry.px(CoverLayoutDefaults.backQuoteAttributionGapInches)) + CGFloat(data.quoteAttributionOffsetYInches) * CGFloat(geometry.dpi)
+                _ = drawCenteredText(ctx: ctx, text: atext, font: afont, color: acolor, centerX: ax, y: cgYf(attributionPillowY), shadow: false)
             }
         }
 
@@ -153,21 +158,37 @@ struct CoverRenderer {
         let photoPath = data.authorPhoto.trimmingCharacters(in: .whitespaces)
 
         if !photoPath.isEmpty, let photo = NSImage(contentsOfFile: resolvedAssetPath(photoPath)) {
-            let ppx = safeX + CGFloat(data.authorPhotoOffsetXInches) * 300
+            let ppx = safeX + CGFloat(data.authorPhotoOffsetXInches) * CGFloat(geometry.dpi)
             // In Pillow: photoPillowY = trimBottom - safe - photoSize + offsetY
             // In CG: y = totalH - photoPillowY - photoSize
-            let photoPillowY = CGFloat(g.trimBottom - g.safe) - photoSize + CGFloat(data.authorPhotoOffsetYInches) * 300
+            let photoPillowY = CGFloat(g.trimBottom - g.safe) - photoSize + CGFloat(data.authorPhotoOffsetYInches) * CGFloat(geometry.dpi)
             let photoCGY = cgYf(photoPillowY)
             let rect = CGRect(x: ppx, y: photoCGY, width: photoSize, height: photoSize)
             if let cg = photo.cgImage(forProposedRect: nil, context: nil, hints: nil) {
-                let sz = min(cg.width, cg.height)
-                let sx = (cg.width - sz)/2, sy = (cg.height - sz)/2
-                if let cropped = cg.cropping(to: CGRect(x: sx, y: sy, width: sz, height: sz)) {
-                    ctx.saveGState()
-                    let clip = CGPath(roundedRect: rect, cornerWidth: photoSize/2, cornerHeight: photoSize/2, transform: nil)
-                    ctx.addPath(clip); ctx.clip()
-                    ctx.draw(cropped, in: rect)
-                    ctx.restoreGState()
+                switch data.authorPhotoShape {
+                case .circle, .square:
+                    let sz = min(cg.width, cg.height)
+                    let sx = (cg.width - sz)/2, sy = (cg.height - sz)/2
+                    if let cropped = cg.cropping(to: CGRect(x: sx, y: sy, width: sz, height: sz)) {
+                        ctx.saveGState()
+                        if data.authorPhotoShape == .circle {
+                            let clip = CGPath(roundedRect: rect, cornerWidth: photoSize/2, cornerHeight: photoSize/2, transform: nil)
+                            ctx.addPath(clip); ctx.clip()
+                        }
+                        ctx.draw(cropped, in: rect)
+                        ctx.restoreGState()
+                    }
+                case .raw:
+                    let aspect = CGFloat(cg.width) / CGFloat(cg.height)
+                    let rawRect: CGRect
+                    if aspect >= 1 {
+                        let height = photoSize / aspect
+                        rawRect = CGRect(x: rect.minX, y: rect.midY - height / 2, width: photoSize, height: height)
+                    } else {
+                        let width = photoSize * aspect
+                        rawRect = CGRect(x: rect.midX - width / 2, y: rect.minY, width: width, height: photoSize)
+                    }
+                    ctx.draw(cg, in: rawRect)
                 }
             }
         }
@@ -177,19 +198,24 @@ struct CoverRenderer {
         if !bio.isEmpty {
             let bfont = CTFontCreateWithName("Arial" as CFString, 32, nil)
             let bcolor = NSColor(hex: data.colorSoft)
-            let bx = safeX + CGFloat(data.authorBioOffsetXInches) * 300
+            let bx = safeX + CGFloat(data.authorBioOffsetXInches) * CGFloat(geometry.dpi)
 
             // bioStartPillow = trimBottom - 2.5in + offsetY, flows down
-            let bioStartPillow = CGFloat(g.trimBottom) - CGFloat(CoverGeometry.px(2.5)) + CGFloat(data.authorBioOffsetYInches) * 300
+            let bioStartPillow = CGFloat(g.trimBottom) - CGFloat(CoverGeometry.px(CoverLayoutDefaults.backAuthorBioBottomInches)) + CGFloat(data.authorBioOffsetYInches) * CGFloat(geometry.dpi)
             // maxYPillow = trimBottom - safe (unless photo blocks it)
             let bioBasePillow = CGFloat(g.trimBottom - g.safe)
-            let bioMaxPillow: CGFloat = photoPath.isEmpty ? bioBasePillow : cgYf(photoSize) - photoGap
+            let bioMaxPillow = photoPath.isEmpty
+                ? bioBasePillow
+                : CGFloat(g.trimBottom - g.safe) - photoSize - photoGap
+            let bioMaxWidth = data.authorBioWidthInches > 0
+                ? CGFloat(CoverGeometry.px(data.authorBioWidthInches))
+                : maxW
 
-            _ = drawWrappedLines(ctx: ctx, text: bio, x: bx,
-                yStart: cgYf(bioStartPillow),
-                font: bfont, color: bcolor, maxWidth: maxW,
-                leading: 43, paragraphGap: CoverGeometry.px(data.authorBioParagraphGapPoints / 72.0),
-                maxY: cgYf(bioMaxPillow))
+            _ = drawWrappedTextBlock(ctx: ctx, text: bio, x: bx,
+                pillowTop: bioStartPillow,
+                font: bfont, color: bcolor, maxWidth: min(maxW, bioMaxWidth),
+                lineSpacing: 5, paragraphSpacing: data.authorBioParagraphGapPoints,
+                maxPillowBottom: bioMaxPillow)
         }
     }
 
@@ -202,8 +228,17 @@ struct CoverRenderer {
 
         let maxW = CGFloat(g.frontWidth - g.safe * 2)
         let centerX = CGFloat(g.effectiveFrontLeft) + CGFloat(g.frontWidth) / 2
+        let centerPillowY = CGFloat(g.trimTop) + CGFloat(g.frontHeight) / 2
         let gold = NSColor(hex: data.colorTitle)
+        let frontTextRect = CGRect(
+            x: CGFloat(g.effectiveFrontLeft),
+            y: cgYf(CGFloat(g.trimBottom)),
+            width: CGFloat(g.frontWidth),
+            height: CGFloat(g.frontHeight)
+        )
 
+        ctx.saveGState()
+        ctx.clip(to: frontTextRect)
         // Title — Pillow: y = trimTop + 0.72in + offsetY
         let titleText = data.title.uppercased()
         if !titleText.isEmpty {
@@ -212,18 +247,28 @@ struct CoverRenderer {
             let fontSize = fitFontSize(text: titleText, maxWidth: maxW,
                                        maxSize: Int(178 * scale), minSize: 14, fontName: fontName)
             let font = CTFontCreateWithName(fontName as CFString, fontSize, nil)
-            let tx = centerX + CGFloat(data.resolvedOffsetX()) * 300
-            let tyPillow = CGFloat(g.trimTop) + CGFloat(CoverGeometry.px(0.72)) + CGFloat(data.resolvedOffsetY()) * 300
+            let tx = data.resolvedTitleCenterX()
+                ? centerX
+                : centerX + CGFloat(data.resolvedOffsetX()) * CGFloat(geometry.dpi)
+            let tyPillow = data.resolvedTitleCenterY()
+                ? centerPillowY
+                : CGFloat(g.trimTop) + CGFloat(CoverGeometry.px(CoverLayoutDefaults.frontTitleTopInches)) + CGFloat(data.resolvedOffsetY()) * CGFloat(geometry.dpi)
             _ = drawCenteredText(ctx: ctx, text: titleText, font: font, color: gold, centerX: tx, y: cgYf(tyPillow), shadow: true)
 
             // Subtitle — below title
             let subtitle = data.subtitle.trimmingCharacters(in: .whitespaces)
             if !subtitle.isEmpty {
+                let subtitleScale = data.resolvedSubtitleScale()
+                let maxSubtitleSize = max(10, Int(42 * subtitleScale))
                 let sfont = CTFontCreateWithName("Arial" as CFString,
-                    fitFontSize(text: subtitle, maxWidth: maxW, maxSize: 42, minSize: 10, fontName: "Arial"), nil)
+                    fitFontSize(text: subtitle, maxWidth: maxW, maxSize: maxSubtitleSize, minSize: 10, fontName: "Arial"), nil)
                 let scolor = NSColor(hex: data.colorAccent)
-                let sx = centerX + CGFloat(data.frontSubtitleOffsetXInches) * 300
-                let syPillow = tyPillow + CGFloat(CoverGeometry.px(0.42)) + 80 + CGFloat(data.frontSubtitleOffsetYInches) * 300
+                let sx = data.resolvedSubtitleCenterX()
+                    ? centerX
+                    : centerX + CGFloat(data.resolvedSubtitleOffsetX()) * CGFloat(geometry.dpi)
+                let syPillow = data.resolvedSubtitleCenterY()
+                    ? centerPillowY
+                    : tyPillow + CGFloat(CoverGeometry.px(CoverLayoutDefaults.frontSubtitleGapInches)) + CGFloat(data.resolvedSubtitleOffsetY()) * CGFloat(geometry.dpi)
                 _ = drawCenteredText(ctx: ctx, text: subtitle, font: sfont, color: scolor, centerX: sx, y: cgYf(syPillow), shadow: false)
             }
         }
@@ -236,10 +281,15 @@ struct CoverRenderer {
             let fontSize = fitFontSize(text: authorText, maxWidth: maxW,
                                        maxSize: Int(48 * scale), minSize: 12, fontName: fontName)
             let font = CTFontCreateWithName(fontName as CFString, fontSize, nil)
-            let ax = centerX + CGFloat(data.resolvedAuthorOffsetX()) * 300
-            let ayPillow = CGFloat(g.trimBottom) - CGFloat(CoverGeometry.px(0.57)) + CGFloat(data.resolvedAuthorOffsetY()) * 300
+            let ax = data.resolvedAuthorCenterX()
+                ? centerX
+                : centerX + CGFloat(data.resolvedAuthorOffsetX()) * CGFloat(geometry.dpi)
+            let ayPillow = data.resolvedAuthorCenterY()
+                ? centerPillowY
+                : CGFloat(g.trimBottom) - CGFloat(CoverGeometry.px(CoverLayoutDefaults.frontAuthorBottomInches)) + CGFloat(data.resolvedAuthorOffsetY()) * CGFloat(geometry.dpi)
             _ = drawCenteredText(ctx: ctx, text: authorText, font: font, color: gold, centerX: ax, y: cgYf(ayPillow), shadow: false)
         }
+        ctx.restoreGState()
     }
 
     private func drawFrontImage(ctx: CGContext) {
@@ -247,21 +297,21 @@ struct CoverRenderer {
               let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return }
 
         let g = geometry
-        // Front panel in Pillow coords: x = frontLeft, y = 0 (top), covers full height
-        // In CG: x = frontLeft, y = 0 (bottom), height = totalHeight
-        let totalH = CGFloat(g.totalHeight)
-        let frontRect = CGRect(x: CGFloat(g.effectiveFrontLeft), y: 0,
-                               width: CGFloat(g.frontWidth), height: totalH)
+        let imageRect = CGRect(
+            x: CGFloat(g.effectiveFrontLeft),
+            y: 0,
+            width: CGFloat(g.frontWidth),
+            height: CGFloat(g.totalHeight)
+        )
 
-        ctx.saveGState(); ctx.clip(to: frontRect)
-        let scale = max(frontRect.width / CGFloat(cg.width), frontRect.height / CGFloat(cg.height))
+        ctx.saveGState(); ctx.clip(to: imageRect)
+        let scale = max(imageRect.width / CGFloat(cg.width), imageRect.height / CGFloat(cg.height))
         let sw = CGFloat(cg.width) * scale, sh = CGFloat(cg.height) * scale
-        let ox = data.frontCoverImageCentered ? (sw - frontRect.width)/2
-                : (sw - frontRect.width)/2 + CGFloat(data.resolvedImageOffsetX()) * 300
-        let oy = data.frontCoverImageCentered ? (sh - totalH)/2
-                : (sh - totalH)/2 + CGFloat(data.resolvedImageOffsetY()) * 300
-        ctx.draw(cg, in: CGRect(x: frontRect.minX - ox, y: frontRect.minY - oy, width: sw, height: sh))
-        drawVerticalGradient(ctx: ctx, in: frontRect, topAlpha: 175, bottomAlpha: 205)
+        let ox = data.frontCoverImageCentered ? (sw - imageRect.width)/2
+                : (sw - imageRect.width)/2 + CGFloat(data.resolvedImageOffsetX()) * CGFloat(geometry.dpi)
+        let oy = data.frontCoverImageCentered ? (sh - imageRect.height)/2
+                : (sh - imageRect.height)/2 + CGFloat(data.resolvedImageOffsetY()) * CGFloat(geometry.dpi)
+        ctx.draw(cg, in: CGRect(x: imageRect.minX - ox, y: imageRect.minY - oy, width: sw, height: sh))
         ctx.restoreGState()
     }
 
@@ -270,7 +320,7 @@ struct CoverRenderer {
     private func drawSpine(ctx: CGContext) {
         let g = geometry
         let sc = resolveSpineColor()
-        let ext = CGFloat(data.spineColorExtensionInches) * 300
+        let ext = CGFloat(data.spineColorExtensionInches) * CGFloat(geometry.dpi)
         let totalH = CGFloat(g.totalHeight)
         ctx.setFillColor(sc.cgColor)
         ctx.fill(CGRect(x: max(0, CGFloat(g.spineLeft) - ext), y: 0,
@@ -278,23 +328,23 @@ struct CoverRenderer {
                          height: totalH))
         guard data.spineText else { return }
 
-        let center = CGFloat(g.spineLeft) + CGFloat(g.spineWidth)/2 + CGFloat(data.spineTextOffsetInches) * 300
+        let center = CGFloat(g.spineLeft) + CGFloat(g.spineWidth)/2 + CGFloat(data.spineTextOffsetInches) * CGFloat(geometry.dpi)
         let gold = NSColor(hex: data.colorTitle)
 
         let st = data.title.uppercased()
         if !st.isEmpty {
             let font = CTFontCreateWithName((data.fontBold.isEmpty ? "Arial" : data.fontBold) as CFString, 42, nil)
-            let tyPillow = CGFloat(g.trimTop) + CGFloat(CoverGeometry.px(0.9)) + CGFloat(data.spineTitleOffsetYInches) * 300
+            let tyPillow = CGFloat(g.trimTop) + CGFloat(CoverGeometry.px(CoverLayoutDefaults.spineTitleTopInches)) + CGFloat(data.spineTitleOffsetYInches) * CGFloat(geometry.dpi)
             drawRotatedText(ctx: ctx, text: st, font: font, color: gold,
-                            centerX: center + CGFloat(data.spineTitleOffsetXInches) * 300,
+                            centerX: center + CGFloat(data.spineTitleOffsetXInches) * CGFloat(geometry.dpi),
                             y: cgYf(tyPillow), degrees: -90)
         }
         let sa = data.authorName.uppercased()
         if !sa.isEmpty {
             let font = CTFontCreateWithName((data.fontRegular.isEmpty ? "Arial" : data.fontRegular) as CFString, 28, nil)
-            let ayPillow = CGFloat(g.trimBottom) - CGFloat(CoverGeometry.px(0.85)) + CGFloat(data.spineAuthorOffsetYInches) * 300
+            let ayPillow = CGFloat(g.trimBottom) - CGFloat(CoverGeometry.px(CoverLayoutDefaults.spineAuthorBottomInches)) + CGFloat(data.spineAuthorOffsetYInches) * CGFloat(geometry.dpi)
             drawRotatedText(ctx: ctx, text: sa, font: font, color: gold,
-                            centerX: center + CGFloat(data.spineAuthorOffsetXInches) * 300,
+                            centerX: center + CGFloat(data.spineAuthorOffsetXInches) * CGFloat(geometry.dpi),
                             y: cgYf(ayPillow), degrees: -90)
         }
     }
@@ -305,14 +355,12 @@ struct CoverRenderer {
         let g = geometry
         let totalH = CGFloat(g.totalHeight)
         ctx.setStrokeColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1)); ctx.setLineWidth(2)
-        let xo = CGFloat(data.guideXOffsetInches) * 300
+        let xo = CGFloat(data.guideXOffsetInches) * CGFloat(geometry.dpi)
         for x in [CGFloat(g.effectiveBackLeft), CGFloat(g.effectiveBackRight),
                   CGFloat(g.spineLeft), CGFloat(g.spineRight),
                   CGFloat(g.effectiveFrontLeft), CGFloat(g.effectiveFrontRight)] {
-            let xp = x + xo
-            if xp >= 0 && xp <= CGFloat(g.totalWidth) {
-                ctx.move(to: CGPoint(x: xp, y: 0)); ctx.addLine(to: CGPoint(x: xp, y: totalH))
-            }
+            let xp = min(max(x + xo, 0), CGFloat(g.totalWidth))
+            ctx.move(to: CGPoint(x: xp, y: 0)); ctx.addLine(to: CGPoint(x: xp, y: totalH))
         }
         // Horizontal: Pillow trimTop → CG y = totalH - trimTop
         let trimTopCG = cgY(g.trimTop)
@@ -324,100 +372,106 @@ struct CoverRenderer {
 
     // ── Drawing Primitives ─────────────────────────────
 
-    private func drawVerticalGradient(ctx: CGContext, in rect: CGRect, topAlpha: Int, bottomAlpha: Int) {
-        let h = Int(rect.height)
-        let maskCtx = CGContext(data: nil, width: 1, height: h, bitsPerComponent: 8, bytesPerRow: 0,
-                                space: CGColorSpace(name: CGColorSpace.linearGray)!,
-                                bitmapInfo: CGImageAlphaInfo.alphaOnly.rawValue)!
-        let d = maskCtx.data!.bindMemory(to: UInt8.self, capacity: h)
-        for y in 0..<h {
-            let r = Double(y) / max(1, Double(h) - 1)
-            d[y] = UInt8(Double(topAlpha) * max(1 - r*2, 0) + Double(bottomAlpha) * max(r*2 - 1, 0))
-        }
-        let mask = maskCtx.makeImage()!
-        ctx.saveGState(); ctx.clip(to: rect, mask: mask)
-        ctx.setFillColor(CGColor(red: 0, green: 0, blue: 0, alpha: 1)); ctx.fill(rect)
-        ctx.restoreGState()
-    }
-
     func drawCenteredText(ctx: CGContext, text: String, font: CTFont, color: NSColor,
                            centerX: CGFloat, y: CGFloat, shadow: Bool) -> CGFloat {
-        let attr = NSAttributedString(string: text, attributes: [.font: font as Any, .foregroundColor: color])
-        let line = CTLineCreateWithAttributedString(attr)
-        let box = CTLineGetImageBounds(line, ctx)
-        let x = centerX - box.width / 2
+        let attr = attributedText(text, font: font, color: color)
+        let size = attr.size()
+        let x = centerX - size.width / 2
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(cgContext: ctx, flipped: false)
         if shadow {
-            let sa = NSAttributedString(string: text, attributes: [.font: font as Any, .foregroundColor: NSColor.black])
-            let sl = CTLineCreateWithAttributedString(sa)
-            ctx.textPosition = CGPoint(x: x + 5, y: y - 5); CTLineDraw(sl, ctx)
+            let shadowAttr = attributedText(text, font: font, color: .black.withAlphaComponent(0.45))
+            shadowAttr.draw(at: CGPoint(x: x + 5, y: y - 5))
         }
-        ctx.textPosition = CGPoint(x: x, y: y); ctx.textMatrix = .identity; CTLineDraw(line, ctx)
-        return y + box.height
+        attr.draw(at: CGPoint(x: x, y: y))
+        NSGraphicsContext.restoreGraphicsState()
+        return y + size.height
     }
 
     private func drawRotatedText(ctx: CGContext, text: String, font: CTFont, color: NSColor,
                                   centerX: CGFloat, y: CGFloat, degrees: CGFloat) {
-        let attr = NSAttributedString(string: text, attributes: [.font: font as Any, .foregroundColor: color])
-        let line = CTLineCreateWithAttributedString(attr)
-        let box = CTLineGetImageBounds(line, ctx)
-        let pad: CGFloat = 17
-        let iw = Int(ceil(box.width + pad*2)), ih = Int(ceil(box.height + pad*2))
-        guard let tc = CGContext(data: nil, width: iw, height: ih, bitsPerComponent: 8, bytesPerRow: iw*4,
-                                 space: CGColorSpace(name: CGColorSpace.sRGB)!,
-                                 bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return }
-        tc.textPosition = CGPoint(x: pad, y: pad); tc.textMatrix = .identity; CTLineDraw(line, tc)
-        guard let ti = tc.makeImage() else { return }
+        let attr = attributedText(text, font: font, color: color)
+        let size = attr.size()
         ctx.saveGState()
         ctx.translateBy(x: centerX, y: y); ctx.rotate(by: degrees * .pi / 180)
-        ctx.draw(ti, in: CGRect(x: -CGFloat(iw)/2, y: -CGFloat(ih)/2, width: CGFloat(iw), height: CGFloat(ih)))
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(cgContext: ctx, flipped: false)
+        attr.draw(at: CGPoint(x: -size.width / 2, y: -size.height / 2))
+        NSGraphicsContext.restoreGraphicsState()
         ctx.restoreGState()
     }
 
-    /// Word-wraps text manually. CG y-coordinate: yStart is baseline, lines go upward (y decreases).
-    /// maxY is the bottom boundary (lines must stay above maxY in CG coords).
-    private func drawWrappedLines(ctx: CGContext, text: String, x: CGFloat, yStart: CGFloat,
-                                   font: CTFont, color: NSColor, maxWidth: CGFloat,
-                                   leading: CGFloat, paragraphGap: Int, maxY: CGFloat) -> CGFloat {
-        var y = yStart
-        for paragraph in text.components(separatedBy: "\n\n") {
-            let words = paragraph.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
-            var line = ""
-            for word in words {
-                let trial = line.isEmpty ? word : "\(line) \(word)"
-                let trialAttr = NSAttributedString(string: trial, attributes: [.font: font as Any])
-                let trialLine = CTLineCreateWithAttributedString(trialAttr)
-                let trialBox = CTLineGetImageBounds(trialLine, ctx)
-                if trialBox.width <= maxWidth {
-                    line = trial
-                    continue
-                }
-                if !line.isEmpty {
-                    if y < maxY { return y }
-                    let la = NSAttributedString(string: line, attributes: [.font: font as Any, .foregroundColor: color])
-                    let ll = CTLineCreateWithAttributedString(la)
-                    ctx.textPosition = CGPoint(x: x, y: y); ctx.textMatrix = .identity; CTLineDraw(ll, ctx)
-                    y -= leading
-                }
-                line = word
-            }
-            if !line.isEmpty {
-                if y - leading < maxY { return y }
-                let la = NSAttributedString(string: line, attributes: [.font: font as Any, .foregroundColor: color])
-                let ll = CTLineCreateWithAttributedString(la)
-                ctx.textPosition = CGPoint(x: x, y: y); ctx.textMatrix = .identity; CTLineDraw(ll, ctx)
-                y -= leading
-            }
-            y -= CGFloat(paragraphGap)
-        }
-        return y
+    private func attributedText(_ text: String, font: CTFont, color: NSColor) -> NSAttributedString {
+        let fontName = CTFontCopyPostScriptName(font) as String
+        let fontSize = CTFontGetSize(font)
+        let nsFont = NSFont(name: fontName, size: fontSize) ?? NSFont.systemFont(ofSize: fontSize)
+        return NSAttributedString(string: text, attributes: [.font: nsFont, .foregroundColor: color])
+    }
+
+    private func attributedParagraphText(
+        _ text: String,
+        font: CTFont,
+        color: NSColor,
+        lineSpacing: CGFloat,
+        paragraphSpacing: CGFloat
+    ) -> NSAttributedString {
+        let fontName = CTFontCopyPostScriptName(font) as String
+        let fontSize = CTFontGetSize(font)
+        let nsFont = NSFont(name: fontName, size: fontSize) ?? NSFont.systemFont(ofSize: fontSize)
+        let style = NSMutableParagraphStyle()
+        style.lineBreakMode = .byWordWrapping
+        style.lineSpacing = lineSpacing
+        style.paragraphSpacing = paragraphSpacing
+        return NSAttributedString(
+            string: text,
+            attributes: [.font: nsFont, .foregroundColor: color, .paragraphStyle: style]
+        )
+    }
+
+    private func drawWrappedTextBlock(
+        ctx: CGContext,
+        text: String,
+        x: CGFloat,
+        pillowTop: CGFloat,
+        font: CTFont,
+        color: NSColor,
+        maxWidth: CGFloat,
+        lineSpacing: CGFloat,
+        paragraphSpacing: CGFloat,
+        maxPillowBottom: CGFloat
+    ) -> CGFloat {
+        let attr = attributedParagraphText(
+            text,
+            font: font,
+            color: color,
+            lineSpacing: lineSpacing,
+            paragraphSpacing: paragraphSpacing
+        )
+        let availableHeight = max(0, maxPillowBottom - pillowTop)
+        let measureRect = CGRect(x: 0, y: 0, width: maxWidth, height: availableHeight)
+        let measured = attr.boundingRect(
+            with: measureRect.size,
+            options: [.usesLineFragmentOrigin, .usesFontLeading]
+        ).integral
+        let drawHeight = min(availableHeight, measured.height)
+        let pillowRect = CGRect(x: x, y: pillowTop, width: maxWidth, height: drawHeight)
+
+        ctx.saveGState()
+        ctx.translateBy(x: 0, y: CGFloat(geometry.totalHeight))
+        ctx.scaleBy(x: 1, y: -1)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(cgContext: ctx, flipped: true)
+        attr.draw(with: pillowRect, options: [.usesLineFragmentOrigin, .usesFontLeading])
+        NSGraphicsContext.restoreGraphicsState()
+        ctx.restoreGState()
+
+        return pillowTop + drawHeight
     }
 
     private func fitFontSize(text: String, maxWidth: CGFloat, maxSize: Int, minSize: Int, fontName: String) -> CGFloat {
         for s in stride(from: maxSize, through: minSize, by: -2) {
             let f = CTFontCreateWithName(fontName as CFString, CGFloat(s), nil)
-            let a = NSAttributedString(string: text, attributes: [.font: f as Any])
-            let l = CTLineCreateWithAttributedString(a)
-            if CTLineGetImageBounds(l, nil).width <= maxWidth { return CGFloat(s) }
+            if attributedText(text, font: f, color: .black).size().width <= maxWidth { return CGFloat(s) }
         }
         return CGFloat(minSize)
     }
@@ -427,10 +481,28 @@ struct CoverRenderer {
     func renderFrontCrop() -> CGImage? {
         guard let full = renderFullCover(includeGuides: false) else { return nil }
         let g = geometry
-        // CG uses bottom-left origin: front panel starts at frontLeft, trimTop from bottom
-        let frontTopCG = cgY(g.trimTop)
+        let cropX: CGFloat
+        let cropWidth: CGFloat
+        if g.bindingType == .hc {
+            if g.readingDirection == .rtl {
+                cropX = 0
+                cropWidth = CGFloat(g.spineLeft)
+            } else {
+                cropX = CGFloat(g.spineRight)
+                cropWidth = CGFloat(g.totalWidth - g.spineRight)
+            }
+        } else {
+            cropX = CGFloat(g.effectiveFrontLeft)
+            cropWidth = CGFloat(g.frontWidth)
+        }
         let frontHeight = CGFloat(g.trimBottom - g.trimTop)
-        return full.cropping(to: CGRect(x: CGFloat(g.effectiveFrontLeft), y: frontTopCG,
-                                         width: CGFloat(g.frontWidth), height: frontHeight))
+        let cropRect = CGRect(
+            x: cropX,
+            y: CGFloat(g.trimTop),
+            width: cropWidth,
+            height: frontHeight
+        )
+        let imageRect = CGRect(x: 0, y: 0, width: full.width, height: full.height)
+        return full.cropping(to: cropRect.intersection(imageRect))
     }
 }

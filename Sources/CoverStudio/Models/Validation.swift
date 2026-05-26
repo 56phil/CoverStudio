@@ -10,7 +10,7 @@ struct Validation {
         let message: String
     }
 
-    static func validate(_ data: CoverData) -> [Issue] {
+    static func validate(_ data: CoverData, sourceURL: URL? = nil) -> [Issue] {
         var issues: [Issue] = []
 
         // Required string fields
@@ -44,7 +44,7 @@ struct Validation {
         }
 
         // Page count
-        if data.pageCount < 24 {
+        if data.resolvedPageCount() < 24 {
             issues.append(Issue(severity: .error, field: "page_count", message: "Print books usually require at least 24 pages."))
         }
 
@@ -52,16 +52,16 @@ struct Validation {
         if data.frontCoverImage.isEmpty {
             issues.append(Issue(severity: .error, field: "front_cover_image", message: "Front cover image is required."))
         } else {
-            let url = URL(fileURLWithPath: data.frontCoverImage)
-            if !FileManager.default.fileExists(atPath: url.path) {
+            let resolved = ProjectManager.resolveImagePath(data.frontCoverImage, relativeTo: sourceURL)
+            if !FileManager.default.fileExists(atPath: resolved) {
                 issues.append(Issue(severity: .error, field: "front_cover_image", message: "Image does not exist: \(data.frontCoverImage)"))
             }
         }
 
         // Author photo
         if !data.authorPhoto.isEmpty {
-            let url = URL(fileURLWithPath: data.authorPhoto)
-            if !FileManager.default.fileExists(atPath: url.path) {
+            let resolved = ProjectManager.resolveImagePath(data.authorPhoto, relativeTo: sourceURL)
+            if !FileManager.default.fileExists(atPath: resolved) {
                 issues.append(Issue(severity: .warning, field: "author_photo", message: "Author photo path does not exist."))
             }
         }
@@ -107,8 +107,10 @@ struct Validation {
         return issues
     }
 
+    private static let hexColorRegex = try! NSRegularExpression(pattern: "^#?[0-9a-fA-F]{6}$")
+
     private static func isValidHexColor(_ value: String) -> Bool {
-        let regex = try! NSRegularExpression(pattern: "^#?[0-9a-fA-F]{6}$")
-        return regex.firstMatch(in: value.trimmingCharacters(in: .whitespaces), range: NSRange(location: 0, length: value.count)) != nil
+        let trimmed = value.trimmingCharacters(in: .whitespaces)
+        return hexColorRegex.firstMatch(in: trimmed, range: NSRange(trimmed.startIndex..., in: trimmed)) != nil
     }
 }

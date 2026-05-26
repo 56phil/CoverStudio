@@ -49,29 +49,6 @@ struct CoverGeometry {
     var effectiveFrontLeft: Int { readingDirection == .rtl ? backLeft : frontLeft }
     var effectiveFrontRight: Int { readingDirection == .rtl ? backRight : frontRight }
 
-    init(data: CoverData) {
-        self.bindingType = data.bindingType
-        self.readingDirection = data.readingDirection
-        self.totalWidthInches = 0
-        self.totalHeightInches = 0
-        self.frontWidthInches = 0
-        self.frontHeightInches = 0
-        self.spineInches = 0
-        self.bleedInches = 0
-        self.hingeInches = 0
-        self.wrapInches = 0
-        self.safeInches = 0
-        self.totalWidth = 0
-        self.totalHeight = 0
-        self.frontWidth = 0
-        self.frontHeight = 0
-        self.spineWidth = 0
-        self.bleed = 0
-        self.hinge = 0
-        self.wrap = 0
-        self.safe = 0
-    }
-
     init(data: CoverData, totalWidthInches: Double, totalHeightInches: Double, frontWidthInches: Double, frontHeightInches: Double, spineInches: Double, bleedInches: Double, hingeInches: Double, wrapInches: Double, safeInches: Double) {
         self.bindingType = data.bindingType
         self.readingDirection = data.readingDirection
@@ -122,7 +99,7 @@ func computeGeometry(from data: CoverData) throws -> CoverGeometry {
         }
 
         let customSpine = data.customSpineWidthInches
-        let spine = customSpine > 0 ? customSpine : Double(data.pageCount) * multiplier
+        let spine = customSpine > 0 ? customSpine : Double(data.resolvedPageCount()) * multiplier
         let bleed = data.customBleedInches > 0 ? data.customBleedInches : 0.125
         let safe = data.customSafeMarginInches > 0 ? data.customSafeMarginInches : 0.375
         let totalW = bleed + trimW + spine + trimW + bleed
