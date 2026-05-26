@@ -3,7 +3,11 @@ import Yams
 import UniformTypeIdentifiers
 
 struct ProjectManager {
+    /// Binary Cover Metadata/Generator format (.cmg)
+    static let cmgType: UTType = UTType(filenameExtension: "cmg", conformingTo: .data) ?? .data
+
     static let coverContentTypes: [UTType] = [
+        cmgType,
         .yaml,
         UTType(filenameExtension: "yml") ?? .yaml,
         UTType(filenameExtension: "md") ?? .plainText,
@@ -11,6 +15,10 @@ struct ProjectManager {
     ]
 
     static func load(from url: URL) throws -> CoverData {
+        if url.pathExtension.lowercased() == "cmg" {
+            let raw = try Data(contentsOf: url)
+            return try PropertyListDecoder().decode(CoverData.self, from: raw)
+        }
         let contents = try String(contentsOf: url, encoding: .utf8)
         let yamlString = try yamlPayload(from: contents, url: url)
         let decoder = YAMLDecoder()
@@ -18,12 +26,20 @@ struct ProjectManager {
     }
 
     static func save(_ data: CoverData, to url: URL) throws {
-        let yamlString = try mergedYAML(for: data, existingAt: url)
         try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
 
+        if url.pathExtension.lowercased() == "cmg" {
+            let encoder = PropertyListEncoder()
+            encoder.outputFormat = .binary
+            let raw = try encoder.encode(data)
+            try raw.write(to: url, options: .atomic)
+            return
+        }
+
+        let yamlString = try mergedYAML(for: data, existingAt: url)
         if url.pathExtension.lowercased() == "md" {
             let existing = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
             let body = markdownBody(from: existing)
