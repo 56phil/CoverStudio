@@ -27,6 +27,7 @@ struct ContentView: View {
 
     @Environment(\.undoManager) private var undoManager
     @StateObject private var undoCoordinator = UndoCoordinator()
+    @State private var validationIssues: [Validation.Issue] = []
 
     /// Project root derived from the opened file
     var projectRoot: String? {
@@ -58,7 +59,7 @@ struct ContentView: View {
                     document.data = newValue
                     undoCoordinator.register(old: oldValue, new: newValue)
                 }
-            ), selectedTab: $selectedTab, projectRoot: projectRoot, onSelectProjectRoot: selectProjectRoot)
+            ), selectedTab: $selectedTab, projectRoot: projectRoot, sourceURL: currentFileURL, onSelectProjectRoot: selectProjectRoot)
                 .navigationSplitViewColumnWidth(min: 320, ideal: inspectorIdealWidth, max: inspectorMaxWidth)
                 .onChange(of: document.data) { _, _ in
                     scheduleRender()
@@ -89,7 +90,7 @@ struct ContentView: View {
 
                 PreviewPane(image: previewImage, errorMessage: errorMessage,
                              widthInches: coverWidthInches, heightInches: coverHeightInches)
-                StatusLine(data: document.data, projectRoot: projectRoot)
+                StatusLine(data: document.data, projectRoot: projectRoot, validationIssues: validationIssues)
             }
         }
         .onAppear {
@@ -139,6 +140,7 @@ struct ContentView: View {
     }
 
     private func renderCover() async {
+        validationIssues = Validation.validate(document.data, sourceURL: currentFileURL)
         do {
             let geometry = try computeGeometry(from: document.data)
             let renderer = CoverRenderer(data: document.data, geometry: geometry, sourceURL: currentFileURL)
@@ -415,6 +417,10 @@ struct ContentView: View {
 struct StatusLine: View {
     let data: CoverData
     let projectRoot: String?
+    let validationIssues: [Validation.Issue]
+
+    private var errorCount: Int   { validationIssues.filter { $0.severity == .error   }.count }
+    private var warningCount: Int { validationIssues.filter { $0.severity == .warning }.count }
 
     var body: some View {
         HStack(spacing: 14) {
@@ -428,6 +434,23 @@ struct StatusLine: View {
             Text(data.bindingType.label)
             Text(data.trimSize.label)
             Text(data.uiUnits.label)
+
+            if errorCount > 0 {
+                Divider().frame(height: 14)
+                Label("\(errorCount) error\(errorCount == 1 ? "" : "s")",
+                      systemImage: "exclamationmark.circle.fill")
+                    .foregroundColor(.red)
+                    .help(validationIssues.filter { $0.severity == .error }
+                        .map { "\($0.field): \($0.message)" }.joined(separator: "\n"))
+            }
+            if warningCount > 0 {
+                Divider().frame(height: 14)
+                Label("\(warningCount) warning\(warningCount == 1 ? "" : "s")",
+                      systemImage: "exclamationmark.triangle.fill")
+                    .foregroundColor(.orange)
+                    .help(validationIssues.filter { $0.severity == .warning }
+                        .map { "\($0.field): \($0.message)" }.joined(separator: "\n"))
+            }
         }
         .font(.caption)
         .foregroundColor(.secondary)

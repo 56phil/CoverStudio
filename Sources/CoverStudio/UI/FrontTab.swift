@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 
 struct FrontTab: View {
     @Binding var data: CoverData
+    let sourceURL: URL?
     @State private var isDropTargeted: Bool = false
 
     var body: some View {
@@ -17,10 +18,10 @@ struct FrontTab: View {
                                 setActiveTitleScale(newValue)
                                 setActiveAuthorScale(newValue)
                             }
-                        ), in: 0.5...2.5, step: 0.05)
+                        ), in: 0.5...1.5, step: 0.02)
                         Text(String(format: "%.2f", data.resolvedTitleScale()))
                             .font(.caption.monospacedDigit())
-                            .frame(width: 36)
+                            .frame(width: 42)
                     }
                     Text("Applies to both title and author")
                         .font(.caption2)
@@ -41,13 +42,19 @@ struct FrontTab: View {
                             .foregroundColor(isDropTargeted ? .accentColor : .secondary.opacity(0.4))
                             .background(RoundedRectangle(cornerRadius: 8)
                                 .fill(isDropTargeted ? Color.accentColor.opacity(0.08) : Color.clear))
-                        if !data.frontCoverImage.isEmpty, let ns = NSImage(contentsOfFile: data.frontCoverImage) {
+                        if let ns = resolvedThumbnail() {
                             Image(nsImage: ns).resizable().aspectRatio(contentMode: .fit).frame(height: 80).cornerRadius(6)
-                        } else {
+                        } else if data.frontCoverImage.isEmpty {
                             VStack(spacing: 6) {
                                 Image(systemName: "photo.on.rectangle").font(.system(size: 24))
                                     .foregroundColor(.secondary.opacity(isDropTargeted ? 0.8 : 0.4))
                                 Text("Drop image here").font(.caption).foregroundColor(.secondary)
+                            }
+                        } else {
+                            VStack(spacing: 6) {
+                                Image(systemName: "exclamationmark.triangle").font(.system(size: 24))
+                                    .foregroundColor(.orange.opacity(0.8))
+                                Text("Image not found").font(.caption).foregroundColor(.secondary)
                             }
                         }
                     }
@@ -64,30 +71,30 @@ struct FrontTab: View {
 
             Section("Title") {
                 TextField(text: $data.title, prompt: Text("Book Title")) { Text("Title") }
+                CenterAxisRow(centerX: activeTitleCenterX, centerY: activeTitleCenterY)
                 OffsetRow("Offset", ox: activeTitleOffsetX, oy: activeTitleOffsetY)
             }
 
             Section("Subtitle") {
                 TextField(text: $data.subtitle, prompt: Text("Subtitle (optional)")) { Text("Subtitle") }
+                CenterAxisRow(centerX: activeSubtitleCenterX, centerY: activeSubtitleCenterY)
+                HStack {
+                    Text("Size").frame(width: 50, alignment: .leading)
+                    Slider(value: activeSubtitleScale, in: 0.25...3.0, step: 0.05)
+                    TextField("Scale", value: activeSubtitleScale, format: .number)
+                        .frame(width: 56)
+                    Text("x")
+                        .foregroundColor(.secondary)
+                }
                 OffsetRow("Offset", ox: activeSubtitleOffsetX, oy: activeSubtitleOffsetY)
             }
 
             Section("Author") {
                 TextField(text: $data.authorName, prompt: Text("Author Name")) { Text("Author") }
+                CenterAxisRow(centerX: activeAuthorCenterX, centerY: activeAuthorCenterY)
                 OffsetRow("Offset", ox: activeAuthorOffsetX, oy: activeAuthorOffsetY)
             }
 
-            Section("Author Photo") {
-                HStack {
-                    TextField("Photo path (optional)", text: $data.authorPhoto).truncationMode(.middle)
-                    Button("Choose\u{2026}") { chooseAuthorPhoto() }.buttonStyle(.borderless).controlSize(.small)
-                }
-                OffsetRow("Position", ox: $data.authorPhotoOffsetXInches, oy: $data.authorPhotoOffsetYInches)
-                HStack {
-                    Text("Size (in)").frame(width: 50, alignment: .leading)
-                    TextField("", value: $data.authorPhotoScaleInches, format: .number).frame(width: 80)
-                }
-            }
         }
     }
 
@@ -131,6 +138,26 @@ struct FrontTab: View {
         )
     }
 
+    private var activeTitleCenterX: Binding<Bool> {
+        Binding(
+            get: { data.resolvedTitleCenterX() },
+            set: {
+                if data.bindingType == .hc { data.hcFrontTitleCenterX = $0 }
+                else { data.frontTitleCenterX = $0 }
+            }
+        )
+    }
+
+    private var activeTitleCenterY: Binding<Bool> {
+        Binding(
+            get: { data.resolvedTitleCenterY() },
+            set: {
+                if data.bindingType == .hc { data.hcFrontTitleCenterY = $0 }
+                else { data.frontTitleCenterY = $0 }
+            }
+        )
+    }
+
     private var activeSubtitleOffsetX: Binding<Double> {
         Binding(
             get: { data.resolvedSubtitleOffsetX() },
@@ -147,6 +174,57 @@ struct FrontTab: View {
             set: {
                 if data.bindingType == .hc { data.hcFrontSubtitleOffsetYInches = $0 }
                 else { data.frontSubtitleOffsetYInches = $0 }
+            }
+        )
+    }
+
+    private var activeSubtitleCenterX: Binding<Bool> {
+        Binding(
+            get: { data.resolvedSubtitleCenterX() },
+            set: {
+                if data.bindingType == .hc { data.hcFrontSubtitleCenterX = $0 }
+                else { data.frontSubtitleCenterX = $0 }
+            }
+        )
+    }
+
+    private var activeSubtitleCenterY: Binding<Bool> {
+        Binding(
+            get: { data.resolvedSubtitleCenterY() },
+            set: {
+                if data.bindingType == .hc { data.hcFrontSubtitleCenterY = $0 }
+                else { data.frontSubtitleCenterY = $0 }
+            }
+        )
+    }
+
+    private var activeSubtitleScale: Binding<Double> {
+        Binding(
+            get: { data.resolvedSubtitleScale() },
+            set: {
+                let value = max($0, 0.1)
+                if data.bindingType == .hc { data.hcFrontSubtitleScale = value }
+                else { data.frontSubtitleScale = value }
+            }
+        )
+    }
+
+    private var activeAuthorCenterX: Binding<Bool> {
+        Binding(
+            get: { data.resolvedAuthorCenterX() },
+            set: {
+                if data.bindingType == .hc { data.hcFrontAuthorCenterX = $0 }
+                else { data.frontAuthorCenterX = $0 }
+            }
+        )
+    }
+
+    private var activeAuthorCenterY: Binding<Bool> {
+        Binding(
+            get: { data.resolvedAuthorCenterY() },
+            set: {
+                if data.bindingType == .hc { data.hcFrontAuthorCenterY = $0 }
+                else { data.frontAuthorCenterY = $0 }
             }
         )
     }
@@ -181,18 +259,17 @@ struct FrontTab: View {
         else { data.frontAuthorScale = value }
     }
 
+    private func resolvedThumbnail() -> NSImage? {
+        guard !data.frontCoverImage.isEmpty else { return nil }
+        let resolved = ProjectManager.resolveImagePath(data.frontCoverImage, relativeTo: sourceURL)
+        return NSImage(contentsOfFile: resolved)
+    }
+
     private func chooseImage() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.png, .jpeg, .tiff, .bmp, .heic]
         panel.canChooseFiles = true; panel.canChooseDirectories = false; panel.allowsMultipleSelection = false
         if panel.runModal() == .OK, let url = panel.url { data.frontCoverImage = url.path }
-    }
-
-    private func chooseAuthorPhoto() {
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.png, .jpeg, .tiff, .bmp, .heic]
-        panel.canChooseFiles = true; panel.canChooseDirectories = false; panel.allowsMultipleSelection = false
-        if panel.runModal() == .OK, let url = panel.url { data.authorPhoto = url.path }
     }
 
     private func handleDrop(providers: [NSItemProvider]) -> Bool {
@@ -206,6 +283,19 @@ struct FrontTab: View {
             }
         }
         return true
+    }
+}
+
+struct CenterAxisRow: View {
+    @Binding var centerX: Bool
+    @Binding var centerY: Bool
+
+    var body: some View {
+        HStack {
+            Text("Center").frame(width: 50, alignment: .leading)
+            Toggle("X", isOn: $centerX)
+            Toggle("Y", isOn: $centerY)
+        }
     }
 }
 

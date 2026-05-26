@@ -13,6 +13,7 @@ struct InspectorView: View {
     @Binding var data: CoverData
     @Binding var selectedTab: InspectorTab
     let projectRoot: String?
+    let sourceURL: URL?
     let onSelectProjectRoot: () -> Void
 
     var body: some View {
@@ -37,7 +38,7 @@ struct InspectorView: View {
                     switch selectedTab {
                     case .setup:
                         SetupTab(data: $data, projectRoot: projectRoot, onSelectProjectRoot: onSelectProjectRoot)
-                    case .front: FrontTab(data: $data)
+                    case .front: FrontTab(data: $data, sourceURL: sourceURL)
                     case .fonts: FontsTab(data: $data)
                     case .spine: SpineTab(data: $data)
                     case .back: BackTab(data: $data)
