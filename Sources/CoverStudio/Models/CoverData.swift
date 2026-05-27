@@ -892,8 +892,9 @@ extension KeyedDecodingContainer where Key == CoverData.CodingKeys {
     }
 
     func doubleOrOne(_ key: Key) -> Double {
-        let v = doubleOrZero(key)
-        return v == 0.0 ? 1.0 : v
+        if let d = try? decodeIfPresent(Double.self, forKey: key) { return d }
+        if let s = try? decodeIfPresent(String.self, forKey: key), let d = Double(s) { return d }
+        return 1.0
     }
 
     func doubleOrDefault(_ key: Key, defaultValue: Double) -> Double {

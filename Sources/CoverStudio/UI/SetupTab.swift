@@ -144,6 +144,9 @@ struct SetupTab: View {
                 Section {
                     Text("Exact values from your printer's template calculator. Defaults shown are KDP estimates — verify with the calculator before submitting.")
                         .font(.caption).foregroundColor(.secondary)
+                    Link("Open KDP cover calculator ↗",
+                         destination: URL(string: "https://kdp.amazon.com/en_US/cover-calculator")!)
+                        .font(.caption)
 
                     TemplateField("Full cover width",
                         value: Binding(get: { data.templateFullCoverWidth ?? hcDefaults.fullWidth(for: data.resolvedPageCount()) },

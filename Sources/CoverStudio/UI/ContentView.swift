@@ -14,6 +14,7 @@ struct ContentView: View {
     @AppStorage("showGuides") private var showGuides: Bool = true
     @State private var showExportOptions: Bool = false
     @AppStorage("exportPDF") private var exportPDF: Bool = true
+    @AppStorage("exportPNG") private var exportPNG: Bool = false
     @AppStorage("exportJPG") private var exportJPG: Bool = true
     @AppStorage("exportBaseName") private var exportBaseName: String = "cover"
     @AppStorage("exportPrependBinding") private var exportPrependBinding: Bool = false
@@ -116,6 +117,7 @@ struct ContentView: View {
         .sheet(isPresented: $showExportOptions) {
             ExportOptionsSheet(
                 exportPDF: $exportPDF,
+                exportPNG: $exportPNG,
                 exportJPG: $exportJPG,
                 baseName: $exportBaseName,
                 prependBinding: $exportPrependBinding,
@@ -142,12 +144,26 @@ struct ContentView: View {
     }
 
     private func renderCover() async {
-        validationIssues = Validation.validate(document.data, sourceURL: currentFileURL)
+        let data = document.data
+        let sourceURL = currentFileURL
+        let guides = showGuides
+
+        validationIssues = Validation.validate(data, sourceURL: sourceURL)
         do {
-            let geometry = try computeGeometry(from: document.data)
-            let renderer = CoverRenderer(data: document.data, geometry: geometry, sourceURL: currentFileURL)
-            previewImage = renderer.renderFullCover(includeGuides: showGuides)
-            frontCropImage = renderer.renderFrontCrop()
+            let geometry = try computeGeometry(from: data)
+            let renderer = CoverRenderer(data: data, geometry: geometry, sourceURL: sourceURL)
+
+            let images: (CGImage?, CGImage?) = await withCheckedContinuation { continuation in
+                DispatchQueue.global(qos: .userInitiated).async {
+                    let full = renderer.renderFullCover(includeGuides: guides)
+                    let front = renderer.renderFrontCrop()
+                    continuation.resume(returning: (full, front))
+                }
+            }
+
+            guard !Task.isCancelled else { return }
+            previewImage = images.0
+            frontCropImage = images.1
             coverWidthInches = geometry.totalWidthInches
             coverHeightInches = geometry.totalHeightInches
             currentGeometry = geometry
@@ -363,8 +379,8 @@ struct ContentView: View {
     private func exportSelectedFormats() {
         commitPendingFieldEdits()
 
-        guard exportPDF || exportJPG else {
-            showAlert(title: "Choose an export format", message: "Select PDF, JPG, or both.")
+        guard exportPDF || exportPNG || exportJPG else {
+            showAlert(title: "Choose an export format", message: "Select at least one format.")
             return
         }
 
@@ -385,24 +401,27 @@ struct ContentView: View {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             let geometry = try computeGeometry(from: document.data)
             let renderer = CoverRenderer(data: document.data, geometry: geometry, sourceURL: currentFileURL)
-            guard let fullImage = renderer.renderFullCover(includeGuides: false) else {
-                throw CocoaError(.fileWriteUnknown)
-            }
 
             var exported: [URL] = []
-            if exportPDF {
-                let pdfURL = directory.appendingPathComponent("\(outputBaseName).pdf")
-                try CoverExporter.exportPDF(
-                    image: fullImage,
-                    widthInches: geometry.totalWidthInches,
-                    heightInches: geometry.totalHeightInches,
-                    to: pdfURL
-                )
-                exported.append(pdfURL)
-
-                let pngURL = directory.appendingPathComponent("\(outputBaseName).png")
-                try CoverExporter.exportPNG(image: fullImage, to: pngURL)
-                exported.append(pngURL)
+            if exportPDF || exportPNG {
+                guard let fullImage = renderer.renderFullCover(includeGuides: false) else {
+                    throw CocoaError(.fileWriteUnknown)
+                }
+                if exportPDF {
+                    let pdfURL = directory.appendingPathComponent("\(outputBaseName).pdf")
+                    try CoverExporter.exportPDF(
+                        image: fullImage,
+                        widthInches: geometry.totalWidthInches,
+                        heightInches: geometry.totalHeightInches,
+                        to: pdfURL
+                    )
+                    exported.append(pdfURL)
+                }
+                if exportPNG {
+                    let pngURL = directory.appendingPathComponent("\(outputBaseName).png")
+                    try CoverExporter.exportPNG(image: fullImage, to: pngURL)
+                    exported.append(pngURL)
+                }
             }
 
             if exportJPG {
@@ -524,6 +543,7 @@ struct KeyboardHandler: NSViewRepresentable {
 
 struct ExportOptionsSheet: View {
     @Binding var exportPDF: Bool
+    @Binding var exportPNG: Bool
     @Binding var exportJPG: Bool
     @Binding var baseName: String
     @Binding var prependBinding: Bool
@@ -539,6 +559,7 @@ struct ExportOptionsSheet: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Toggle("PDF full cover", isOn: $exportPDF)
+                Toggle("PNG full cover", isOn: $exportPNG)
                 Toggle("JPG front cover", isOn: $exportJPG)
             }
 
@@ -567,7 +588,7 @@ struct ExportOptionsSheet: View {
                     .keyboardShortcut(.cancelAction)
                 Button("Export", action: onExport)
                     .keyboardShortcut(.defaultAction)
-                    .disabled(!exportPDF && !exportJPG)
+                    .disabled(!exportPDF && !exportPNG && !exportJPG)
             }
         }
         .padding(18)

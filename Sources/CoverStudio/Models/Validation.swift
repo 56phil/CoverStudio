@@ -99,6 +99,16 @@ struct Validation {
             issues.append(Issue(severity: .info, field: "trim_size", message: "Using a custom size. Check your printer’s bleed, spine, and safe-area requirements."))
         }
 
+        // Scale fields
+        for (field, scale) in [
+            ("front_title_scale",    data.frontTitleScale),
+            ("front_author_scale",   data.frontAuthorScale),
+            ("hc_front_title_scale", data.hcFrontTitleScale),
+            ("hc_front_author_scale",data.hcFrontAuthorScale),
+        ] where scale == 0 {
+            issues.append(Issue(severity: .warning, field: field, message: "Scale is 0 — text will be invisible."))
+        }
+
         // Blurb warning
         if data.blurb.isEmpty {
             issues.append(Issue(severity: .warning, field: "blurb", message: "Back-cover blurb is empty."))

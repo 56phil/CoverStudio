@@ -84,9 +84,10 @@ struct CoverRenderer {
         ctx.setFillColor(NSColor(red: 24/255, green: 31/255, blue: 29/255, alpha: 1).cgColor)
         ctx.fill(CGRect(x: 0, y: 0, width: totalW, height: totalH))
 
-        drawBack(ctx: ctx)
+        let spineColor = resolveSpineColor()
+        drawBack(ctx: ctx, spineColor: spineColor)
         drawFront(ctx: ctx)
-        drawSpine(ctx: ctx)
+        drawSpine(ctx: ctx, spineColor: spineColor)
         if includeGuides { drawGuides(ctx: ctx) }
         return ctx.makeImage()
     }
@@ -101,9 +102,8 @@ struct CoverRenderer {
 
     // ── Back Cover ─────────────────────────────────────
 
-    private func drawBack(ctx: CGContext) {
+    private func drawBack(ctx: CGContext, spineColor: NSColor) {
         let g = geometry
-        let spineColor = resolveSpineColor()
         let totalH = CGFloat(g.totalHeight)
 
         let backBox: CGRect = g.effectiveBackLeft < g.spineLeft
@@ -315,9 +315,9 @@ struct CoverRenderer {
 
     // ── Spine ──────────────────────────────────────────
 
-    private func drawSpine(ctx: CGContext) {
+    private func drawSpine(ctx: CGContext, spineColor: NSColor) {
         let g = geometry
-        let sc = resolveSpineColor()
+        let sc = spineColor
         let ext = CGFloat(data.spineColorExtensionInches) * CGFloat(geometry.dpi)
         let totalH = CGFloat(g.totalHeight)
         ctx.setFillColor(sc.cgColor)

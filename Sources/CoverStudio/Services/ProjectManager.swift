@@ -107,6 +107,21 @@ struct ProjectManager {
             .appendingPathComponent("cover.md")
     }
 
+    // Find \n--- that ends the line (followed by \n or end-of-string).
+    // A bare \n--- mid-token (e.g. \n---key:) is not a valid closing fence.
+    private static func frontmatterClose(in text: String, from start: String.Index) -> Range<String.Index>? {
+        var search = start
+        while let range = text[search...].range(of: "\n---") {
+            let after = range.upperBound
+            if after == text.endIndex || text[after] == "\n" {
+                return range
+            }
+            guard let next = text.index(range.lowerBound, offsetBy: 1, limitedBy: text.endIndex) else { break }
+            search = next
+        }
+        return nil
+    }
+
     private static func yamlPayload(from contents: String, url: URL) throws -> String {
         guard url.pathExtension.lowercased() == "md" else {
             return contents
@@ -118,7 +133,7 @@ struct ProjectManager {
         }
 
         let bodyStart = normalized.index(normalized.startIndex, offsetBy: 4)
-        guard let closingRange = normalized[bodyStart...].range(of: "\n---") else {
+        guard let closingRange = frontmatterClose(in: normalized, from: bodyStart) else {
             throw ProjectManagerError.missingFrontmatter
         }
 
@@ -132,7 +147,7 @@ struct ProjectManager {
         }
 
         let bodyStart = normalized.index(normalized.startIndex, offsetBy: 4)
-        guard let closingRange = normalized[bodyStart...].range(of: "\n---") else {
+        guard let closingRange = frontmatterClose(in: normalized, from: bodyStart) else {
             return "\n"
         }
 
@@ -160,7 +175,7 @@ struct ProjectManager {
             existingMap[key] = value
         }
 
-        return try Yams.dump(object: existingMap, sortKeys: false)
+        return try Yams.dump(object: existingMap, sortKeys: true)
     }
 }
 

@@ -68,7 +68,13 @@ struct BackTab: View {
 struct WidthRow: View {
     let label: String
     @Binding var width: Double
-    @State private var manualWidth: Double = 4.0
+    @State private var manualWidth: Double
+
+    init(label: String, width: Binding<Double>) {
+        self.label = label
+        self._width = width
+        self._manualWidth = State(initialValue: width.wrappedValue > 0 ? width.wrappedValue : 4.0)
+    }
 
     private var isAuto: Binding<Bool> {
         Binding(
@@ -124,11 +130,6 @@ struct WidthRow: View {
                     .frame(width: 86)
                     .disabled(width <= 0)
                 Text("in").foregroundColor(.secondary)
-            }
-        }
-        .onAppear {
-            if width > 0 {
-                manualWidth = width
             }
         }
     }
