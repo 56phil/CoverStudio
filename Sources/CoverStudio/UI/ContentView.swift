@@ -399,6 +399,10 @@ struct ContentView: View {
                     to: pdfURL
                 )
                 exported.append(pdfURL)
+
+                let pngURL = directory.appendingPathComponent("\(outputBaseName).png")
+                try CoverExporter.exportPNG(image: fullImage, to: pngURL)
+                exported.append(pngURL)
             }
 
             if exportJPG {

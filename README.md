@@ -22,7 +22,8 @@ CoverStudio is early software. It can already:
 - Preserve precomposed front art with `front_text: false`.
 - Tune spine text, spine color, and color extension.
 - Place back-cover blurb, quote, author bio, and author photo.
-- Export PNG, JPEG, and PDF output.
+- Export the full wraparound cover as PDF; a PNG copy is written alongside it automatically.
+- Export a front-cover crop as JPEG.
 
 The app is being developed against real book projects, so compatibility with
 existing cover metadata matters as much as the native UI.
