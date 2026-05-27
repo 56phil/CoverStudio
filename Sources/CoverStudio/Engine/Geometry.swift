@@ -48,6 +48,9 @@ struct CoverGeometry {
     var effectiveBackRight: Int { readingDirection == .rtl ? frontRight : backRight }
     var effectiveFrontLeft: Int { readingDirection == .rtl ? backLeft : frontLeft }
     var effectiveFrontRight: Int { readingDirection == .rtl ? backRight : frontRight }
+    var backBarcodeZoneBottom: Int {
+        trimBottom - Self.px(CoverLayoutDefaults.backBarcodeBottomMarginInches)
+    }
 
     init(data: CoverData, totalWidthInches: Double, totalHeightInches: Double, frontWidthInches: Double, frontHeightInches: Double, spineInches: Double, bleedInches: Double, hingeInches: Double, wrapInches: Double, safeInches: Double) {
         self.bindingType = data.bindingType

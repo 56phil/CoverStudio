@@ -18,4 +18,5 @@ enum CoverLayoutDefaults {
     static let backAuthorBioBottomInches = 2.5
     static let backAuthorBioParagraphGapPoints = 8.0
     static let backAuthorPhotoSizeInches = 1.18
+    static let backBarcodeBottomMarginInches = 0.25
 }

@@ -38,7 +38,7 @@ struct BackTab: View {
                         .buttonStyle(.borderless)
                         .controlSize(.small)
                 }
-                OffsetRow("Offset", ox: $data.authorPhotoOffsetXInches, oy: $data.authorPhotoOffsetYInches)
+                OffsetRow("Barcode offset", ox: $data.authorPhotoOffsetXInches, oy: $data.authorPhotoOffsetYInches)
                 HStack {
                     Text("Size (in)").frame(width: 60, alignment: .leading)
                     TextField("", value: $data.authorPhotoScaleInches, format: .number).frame(width: 80)

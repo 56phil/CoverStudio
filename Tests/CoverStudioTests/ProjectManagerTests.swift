@@ -318,6 +318,21 @@ final class ProjectManagerTests: XCTestCase {
         XCTAssertEqual(data.authorBioParagraphGapPoints, CoverLayoutDefaults.backAuthorBioParagraphGapPoints, accuracy: 0.0001)
         XCTAssertEqual(data.authorPhotoScaleInches, CoverLayoutDefaults.backAuthorPhotoSizeInches, accuracy: 0.0001)
         XCTAssertEqual(data.authorPhotoOffsetXInches, 0.0, accuracy: 0.0001)
+        XCTAssertEqual(data.authorPhotoOffsetYInches, 0.0, accuracy: 0.0001)
+    }
+
+    func testBackBarcodeZoneBottomIsQuarterInchAboveTrimBottom() throws {
+        var data = CoverData()
+        data.bindingType = .pb
+        data.trimSize = .sixX9
+        data.pageCount = 200
+
+        let geometry = try computeGeometry(from: data)
+
+        XCTAssertEqual(
+            geometry.trimBottom - geometry.backBarcodeZoneBottom,
+            CoverGeometry.px(CoverLayoutDefaults.backBarcodeBottomMarginInches)
+        )
     }
 
     func testRendererUsesConfiguredTitleColor() throws {

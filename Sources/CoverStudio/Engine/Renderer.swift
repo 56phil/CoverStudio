@@ -152,16 +152,14 @@ struct CoverRenderer {
             }
         }
 
-        // Author photo — at bottom of safe area
+        // Author photo — bottom aligned with the barcode zone baseline
         let photoSize = CGFloat(CoverGeometry.px(data.authorPhotoScaleInches))
         let photoGap: CGFloat = 72
         let photoPath = data.authorPhoto.trimmingCharacters(in: .whitespaces)
+        let photoPillowY = CGFloat(g.backBarcodeZoneBottom) - photoSize + CGFloat(data.authorPhotoOffsetYInches) * CGFloat(geometry.dpi)
 
         if !photoPath.isEmpty, let photo = NSImage(contentsOfFile: resolvedAssetPath(photoPath)) {
             let ppx = safeX + CGFloat(data.authorPhotoOffsetXInches) * CGFloat(geometry.dpi)
-            // In Pillow: photoPillowY = trimBottom - safe - photoSize + offsetY
-            // In CG: y = totalH - photoPillowY - photoSize
-            let photoPillowY = CGFloat(g.trimBottom - g.safe) - photoSize + CGFloat(data.authorPhotoOffsetYInches) * CGFloat(geometry.dpi)
             let photoCGY = cgYf(photoPillowY)
             let rect = CGRect(x: ppx, y: photoCGY, width: photoSize, height: photoSize)
             if let cg = photo.cgImage(forProposedRect: nil, context: nil, hints: nil) {
@@ -206,7 +204,7 @@ struct CoverRenderer {
             let bioBasePillow = CGFloat(g.trimBottom - g.safe)
             let bioMaxPillow = photoPath.isEmpty
                 ? bioBasePillow
-                : CGFloat(g.trimBottom - g.safe) - photoSize - photoGap
+                : photoPillowY - photoGap
             let bioMaxWidth = data.authorBioWidthInches > 0
                 ? CGFloat(CoverGeometry.px(data.authorBioWidthInches))
                 : maxW
