@@ -291,7 +291,9 @@ struct CoverRenderer {
     }
 
     private func drawFrontImage(ctx: CGContext) {
-        guard let image = NSImage(contentsOf: URL(fileURLWithPath: resolvedAssetPath(data.frontCoverImage))),
+        let assetPath = resolvedAssetPath(data.frontCoverImage)
+        guard let imageData = try? Data(contentsOf: URL(fileURLWithPath: assetPath)),
+              let image = NSImage(data: imageData),
               let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return }
 
         let g = geometry
@@ -321,8 +323,8 @@ struct CoverRenderer {
         let ext = CGFloat(data.spineColorExtensionInches) * CGFloat(geometry.dpi)
         let totalH = CGFloat(g.totalHeight)
         ctx.setFillColor(sc.cgColor)
-        ctx.fill(CGRect(x: max(0, CGFloat(g.spineLeft) - ext), y: 0,
-                         width: min(CGFloat(g.totalWidth), CGFloat(g.spineRight) + ext) - max(0, CGFloat(g.spineLeft) - ext),
+        ctx.fill(CGRect(x: CGFloat(g.spineLeft), y: 0,
+                         width: min(CGFloat(g.totalWidth) - CGFloat(g.spineLeft), CGFloat(g.spineWidth) + ext),
                          height: totalH))
         guard data.spineText else { return }
 

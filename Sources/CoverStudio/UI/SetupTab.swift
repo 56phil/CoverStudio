@@ -95,7 +95,7 @@ struct SetupTab: View {
                     ForEach(InteriorType.allCases, id: \.self) { Text($0.label).tag($0) }
                 }
                 Picker("Paper", selection: $data.paperType) {
-                    ForEach(PaperType.options(for: data.interiorType), id: \.self) { Text($0.label).tag($0) }
+                    ForEach(PaperType.options(for: data.interiorType, binding: data.bindingType), id: \.self) { Text($0.label).tag($0) }
                 }
             }
 
@@ -195,7 +195,7 @@ private struct TemplateField: View {
     var body: some View {
         HStack {
             Text(label).frame(width: 130, alignment: .leading)
-            TextField(label, value: $value, format: .number.precision(.fractionLength(3)))
+            TextField("", value: $value, format: .number.precision(.fractionLength(3)))
                 .multilineTextAlignment(.trailing)
         }
     }
