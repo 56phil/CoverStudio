@@ -30,6 +30,12 @@ struct ContentView: View {
     @StateObject private var undoCoordinator = UndoCoordinator()
     @State private var validationIssues: [Validation.Issue] = []
     @State private var previewResetID = UUID()
+    @State private var savedData: CoverData?
+
+    private var isDirty: Bool {
+        guard let savedData else { return false }
+        return savedData != document.data
+    }
 
     /// Project root derived from the opened file
     var projectRoot: String? {
@@ -109,6 +115,9 @@ struct ContentView: View {
         .onChange(of: selectedTab) { _, tab in
             savedSelectedTab = tab.rawValue
         }
+        .onChange(of: isDirty) { _, dirty in
+            NSApp.keyWindow?.isDocumentEdited = dirty
+        }
         .onChange(of: currentFileURL) { _, url in
             if let url {
                 persistCurrentCoverFile(url)
@@ -129,6 +138,7 @@ struct ContentView: View {
         }
         .background(KeyboardHandler(
             showGuides: $showGuides,
+            selectedTab: $selectedTab,
             saveAction: { saveDocument() },
             exportAction: { openExportOptions() }
         ))
@@ -265,6 +275,8 @@ struct ContentView: View {
                         try ProjectManager.save(document.data, to: url)
                         currentFileURL = url
                         persistCurrentCoverFile(url)
+                        savedData = document.data
+                        NSApp.keyWindow?.isDocumentEdited = false
                     } catch {
                         let alert = NSAlert()
                         alert.messageText = "Could not save file"
@@ -279,6 +291,8 @@ struct ContentView: View {
         do {
             try ProjectManager.save(document.data, to: targetURL)
             persistCurrentCoverFile(targetURL)
+            savedData = document.data
+            NSApp.keyWindow?.isDocumentEdited = false
         } catch {
             let alert = NSAlert()
             alert.messageText = "Could not save file"
@@ -340,6 +354,8 @@ struct ContentView: View {
         previewResetID = UUID()
         undoCoordinator.undoManager?.removeAllActions()
         persistCurrentCoverFile(url)
+        savedData = document.data
+        NSApp.keyWindow?.isDocumentEdited = false
     }
 
     private func setupUndoCoordinator() {
@@ -500,41 +516,61 @@ struct StatusLine: View {
 
 struct KeyboardHandler: NSViewRepresentable {
     @Binding var showGuides: Bool
+    @Binding var selectedTab: InspectorTab
     var saveAction: () -> Void
     var exportAction: () -> Void
 
-    func makeNSView(context: Context) -> KeyCaptureView {
-        let view = KeyCaptureView()
-        view.onKeyDown = { event in
-            let hasCmd = event.modifierFlags.contains(.command)
-            let hasShift = event.modifierFlags.contains(.shift)
-            let key = event.charactersIgnoringModifiers
+    func makeCoordinator() -> Coordinator { Coordinator() }
 
-            if hasCmd && !hasShift && key == "g" {
-                showGuides.toggle()
-                return true
-            } else if hasCmd && !hasShift && key == "s" {
-                saveAction()
-                return true
-            } else if hasCmd && !hasShift && key == "e" {
-                exportAction()
-                return true
-            }
-            return false
+    func makeNSView(context: Context) -> NSView {
+        context.coordinator.monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            context.coordinator.handle(event)
         }
-        return view
+        return NSView()
     }
 
-    func updateNSView(_ nsView: KeyCaptureView, context: Context) {}
+    func updateNSView(_ nsView: NSView, context: Context) {
+        context.coordinator.showGuides   = { showGuides }
+        context.coordinator.setGuides    = { showGuides = $0 }
+        context.coordinator.getTab       = { selectedTab }
+        context.coordinator.setTab       = { selectedTab = $0 }
+        context.coordinator.saveAction   = saveAction
+        context.coordinator.exportAction = exportAction
+    }
 
-    class KeyCaptureView: NSView {
-        var onKeyDown: ((NSEvent) -> Bool)?
+    final class Coordinator {
+        var monitor: Any?
+        var showGuides:   () -> Bool             = { false }
+        var setGuides:    (Bool) -> Void         = { _ in }
+        var getTab:       () -> InspectorTab     = { .setup }
+        var setTab:       (InspectorTab) -> Void = { _ in }
+        var saveAction:   () -> Void             = {}
+        var exportAction: () -> Void             = {}
 
-        override var acceptsFirstResponder: Bool { true }
+        func handle(_ event: NSEvent) -> NSEvent? {
+            let flags   = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            let key     = event.charactersIgnoringModifiers
+            let cmdOnly = flags == .command
 
-        override func keyDown(with event: NSEvent) {
-            let handled = onKeyDown?(event) ?? false
-            if !handled { super.keyDown(with: event) }
+            if cmdOnly && key == "g" {
+                setGuides(!showGuides()); return nil
+            } else if cmdOnly && key == "s" {
+                saveAction(); return nil
+            } else if cmdOnly && key == "e" {
+                exportAction(); return nil
+            } else if cmdOnly && key == "[" {
+                setTab(getTab().previous()); return nil
+            } else if cmdOnly && key == "]" {
+                setTab(getTab().next()); return nil
+            } else if cmdOnly, let key, let digit = Int(key),
+                      digit >= 1 && digit <= InspectorTab.allCases.count {
+                setTab(InspectorTab.allCases[digit - 1]); return nil
+            }
+            return event
+        }
+
+        deinit {
+            if let monitor { NSEvent.removeMonitor(monitor) }
         }
     }
 }

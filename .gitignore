@@ -1,9 +1,11 @@
 .build/
 dist/
 .DS_Store
+Brewfile
 DerivedData/
 *.xcuserstate
 *.xcuserdata/
 *.xcodeproj/project.xcworkspace/xcuserdata/
 *.xcodeproj/xcuserdata/
 *.swiftpm/
+*.claude/

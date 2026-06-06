@@ -1,8 +1,10 @@
 import Foundation
 import Yams
 
+let currentSchemaVersion = 2
+
 struct CoverData: Codable, Equatable {
-    var schemaVersion: Int = 1
+    var schemaVersion: Int = currentSchemaVersion
 
     // Binding
     var bindingType: BindingType = .pb
@@ -446,7 +448,9 @@ struct CoverData: Codable, Equatable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
+        let fileSchemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
+        schemaVersion = currentSchemaVersion
+        _ = fileSchemaVersion  // retained for future per-version migration logic
 
         bindingType = try container.decodeIfPresent(BindingType.self, forKey: .bindingType) ?? .pb
         interiorType = try container.decodeIfPresent(InteriorType.self, forKey: .interiorType) ?? .blackWhite

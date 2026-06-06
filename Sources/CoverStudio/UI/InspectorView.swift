@@ -7,6 +7,18 @@ enum InspectorTab: String, CaseIterable {
     case spine  = "Spine"
     case back   = "Back"
     case yaml   = "YAML"
+
+    func next() -> InspectorTab {
+        let all = Self.allCases
+        let idx = all.firstIndex(of: self)!
+        return all[(idx + 1) % all.count]
+    }
+
+    func previous() -> InspectorTab {
+        let all = Self.allCases
+        let idx = all.firstIndex(of: self)!
+        return all[(idx + all.count - 1) % all.count]
+    }
 }
 
 struct InspectorView: View {

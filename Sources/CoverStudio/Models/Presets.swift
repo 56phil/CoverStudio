@@ -29,18 +29,22 @@ enum InteriorType: String, Codable, CaseIterable {
 enum PaperType: String, Codable, CaseIterable {
     case white = "white"
     case cream = "cream"
+    case groundwood = "groundwood"
 
     var label: String {
         switch self {
         case .white: "White"
         case .cream: "Cream"
+        case .groundwood: "Groundwood"
         }
     }
 
-    static func options(for interior: InteriorType) -> [PaperType] {
+    static func options(for interior: InteriorType, binding: BindingType = .pb) -> [PaperType] {
         switch interior {
-        case .blackWhite: [.white, .cream]
-        case .standardColor, .premiumColor: [.white]
+        case .blackWhite:
+            return binding == .pb ? [.white, .cream, .groundwood] : [.white, .cream]
+        case .standardColor, .premiumColor:
+            return [.white]
         }
     }
 }

@@ -15,14 +15,37 @@ struct ProjectManager {
     ]
 
     static func load(from url: URL) throws -> CoverData {
+        let data: CoverData
         if url.pathExtension.lowercased() == "cmg" {
             let raw = try Data(contentsOf: url)
-            return try PropertyListDecoder().decode(CoverData.self, from: raw)
+            data = try PropertyListDecoder().decode(CoverData.self, from: raw)
+        } else {
+            let contents = try String(contentsOf: url, encoding: .utf8)
+            let yamlString = try yamlPayload(from: contents, url: url)
+            let decoder = YAMLDecoder()
+            data = try decoder.decode(CoverData.self, from: yamlString)
         }
-        let contents = try String(contentsOf: url, encoding: .utf8)
-        let yamlString = try yamlPayload(from: contents, url: url)
-        let decoder = YAMLDecoder()
-        return try decoder.decode(CoverData.self, from: yamlString)
+        migrateIfNeeded(data, to: url)
+        return data
+    }
+
+    /// Silently rewrite the file when it was loaded from an older schema version.
+    private static func migrateIfNeeded(_ data: CoverData, to url: URL) {
+        guard data.schemaVersion == currentSchemaVersion else { return }
+        // Re-read the raw file to check whether the on-disk schema is outdated.
+        let onDiskVersion: Int
+        if url.pathExtension.lowercased() == "cmg" {
+            let raw = (try? Data(contentsOf: url)).flatMap { try? PropertyListDecoder().decode(CoverData.self, from: $0) }
+            onDiskVersion = raw?.schemaVersion ?? 1
+        } else {
+            let contents = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+            let yaml = (try? yamlPayload(from: contents, url: url)) ?? ""
+            let versionLine = yaml.components(separatedBy: "\n").first { $0.hasPrefix("schema_version:") }
+            let parsed = versionLine.flatMap { Int($0.replacingOccurrences(of: "schema_version:", with: "").trimmingCharacters(in: .whitespaces)) }
+            onDiskVersion = parsed ?? 1
+        }
+        guard onDiskVersion < currentSchemaVersion else { return }
+        try? save(data, to: url)
     }
 
     static func save(_ data: CoverData, to url: URL) throws {
@@ -51,22 +74,27 @@ struct ProjectManager {
         }
     }
 
-    /// Resolve an image path relative to the project directory (the folder containing the YAML file)
-    static func resolveImagePath(_ imagePath: String, relativeTo yamlURL: URL?) -> String {
-        if imagePath.hasPrefix("/") { return imagePath }
-        guard let yamlURL else { return imagePath }
+    /// Resolve a project path relative to the project directory (the folder containing the YAML file).
+    static func resolveProjectPath(_ path: String, relativeTo yamlURL: URL?) -> String {
+        if path.hasPrefix("/") { return path }
+        guard let yamlURL else { return path }
 
-        if imagePath.hasPrefix("cover/") {
-            return projectRoot(for: yamlURL).appendingPathComponent(imagePath).path
+        if path.hasPrefix("cover/") {
+            return projectRoot(for: yamlURL).appendingPathComponent(path).path
         }
 
         let coverDirectory = yamlURL.deletingLastPathComponent()
-        let coverRelative = coverDirectory.appendingPathComponent(imagePath).path
+        let coverRelative = coverDirectory.appendingPathComponent(path).path
         if FileManager.default.fileExists(atPath: coverRelative) {
             return coverRelative
         }
 
-        return projectRoot(for: yamlURL).appendingPathComponent(imagePath).path
+        return projectRoot(for: yamlURL).appendingPathComponent(path).path
+    }
+
+    /// Resolve an image path relative to the project directory (the folder containing the YAML file)
+    static func resolveImagePath(_ imagePath: String, relativeTo yamlURL: URL?) -> String {
+        resolveProjectPath(imagePath, relativeTo: yamlURL)
     }
 
     /// Store a path relative to the project root when the file lives inside it; otherwise absolute.

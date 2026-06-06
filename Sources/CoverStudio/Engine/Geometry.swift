@@ -2,7 +2,7 @@ import Foundation
 
 /// Spine multipliers: (interior, paper) → inches per page
 let spineMultipliers: [InteriorType: [PaperType: Double]] = [
-    .blackWhite: [.white: 0.002252, .cream: 0.0025],
+    .blackWhite: [.white: 0.002252, .cream: 0.0025, .groundwood: 0.002252],
     .standardColor: [.white: 0.002252],
     .premiumColor: [.white: 0.002347],
 ]

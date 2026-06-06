@@ -9,20 +9,24 @@ struct BackTab: View {
     var body: some View {
         Form {
             Section("Blurb") {
-                TextField("Blurb", text: $data.blurb, axis: .vertical).lineLimit(4...10)
+                TextEditor(text: $data.blurb).frame(minHeight: 80, maxHeight: 200).font(.body)
+                Button("Load from .txt\u{2026}") { loadText(into: $data.blurb) }
+                    .buttonStyle(.borderedProminent)
                 OffsetRow("Offset", ox: $data.blurbOffsetXInches, oy: $data.blurbOffsetYInches)
                 WidthRow(label: "Line width", width: $data.blurbWidthInches)
             }
 
             Section("Quote") {
-                TextField("Quote", text: $data.quote, axis: .vertical).lineLimit(2...4)
+                TextEditor(text: $data.quote).frame(minHeight: 50, maxHeight: 100).font(.body)
                 OffsetRow("Offset", ox: $data.quoteOffsetXInches, oy: $data.quoteOffsetYInches)
                 TextField("Attribution", text: $data.quoteAttribution)
                 OffsetRow("Attr offset", ox: $data.quoteAttributionOffsetXInches, oy: $data.quoteAttributionOffsetYInches)
             }
 
             Section("Author Bio") {
-                TextField("Bio", text: $data.authorBio, axis: .vertical).lineLimit(4...8)
+                TextEditor(text: $data.authorBio).frame(minHeight: 80, maxHeight: 160).font(.body)
+                Button("Load from .txt\u{2026}") { loadText(into: $data.authorBio) }
+                    .buttonStyle(.borderedProminent)
                 OffsetRow("Offset", ox: $data.authorBioOffsetXInches, oy: $data.authorBioOffsetYInches)
                 WidthRow(label: "Line width", width: $data.authorBioWidthInches)
                 HStack {
@@ -50,6 +54,35 @@ struct BackTab: View {
                 }
                 .pickerStyle(.segmented)
             }
+        }
+    }
+
+    // Join hard-wrapped lines within each paragraph; keep blank lines as paragraph breaks.
+    private func reflow(_ text: String) -> String {
+        // Split on one or more blank lines to get paragraphs.
+        var paragraphs: [String] = []
+        var current: [String] = []
+        for line in text.components(separatedBy: "\n") {
+            let trimmed = line.trimmingCharacters(in: CharacterSet.whitespaces)
+            if trimmed.isEmpty {
+                if !current.isEmpty { paragraphs.append(current.joined(separator: " ")); current = [] }
+            } else {
+                current.append(trimmed)
+            }
+        }
+        if !current.isEmpty { paragraphs.append(current.joined(separator: " ")) }
+        return paragraphs.joined(separator: "\n\n")
+    }
+
+    private func loadText(into binding: Binding<String>) {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.plainText]
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        if panel.runModal() == .OK, let url = panel.url,
+           let text = try? String(contentsOf: url, encoding: .utf8) {
+            binding.wrappedValue = reflow(text)
         }
     }
 
