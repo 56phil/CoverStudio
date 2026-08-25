@@ -37,30 +37,8 @@
             <string>Owner</string>
             <key>LSItemContentTypes</key>
             <array>
-                <string>public.yaml</string>
-                <string>public.json</string>
+                <string>public.plain-text</string>
             </array>
-        </dict>
-    </array>
-    <key>UTExportedTypeDeclarations</key>
-    <array>
-        <dict>
-            <key>UTTypeIdentifier</key>
-            <string>com.coverstudio.cover-yaml</string>
-            <key>UTTypeDescription</key>
-            <string>Cover Studio Document</string>
-            <key>UTTypeConformsTo</key>
-            <array>
-                <string>public.yaml</string>
-            </array>
-            <key>UTTypeTagSpecification</key>
-            <dict>
-                <key>public.filename-extension</key>
-                <array>
-                    <string>cover.yaml</string>
-                    <string>cover.yml</string>
-                </array>
-            </dict>
         </dict>
     </array>
 </dict>

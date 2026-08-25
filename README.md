@@ -4,11 +4,10 @@ CoverStudio is a macOS app for designing and tuning full-wrap book covers.
 
 It is built for authors and small publishers who need more control than a
 template-only tool gives them: exact print dimensions, front/spine/back layout
-controls, YAML-backed project files, and export-ready cover images.
+controls, Markdown project files, and export-ready cover images.
 
 The first target workflow is Amazon KDP paperback and hardcover cover creation,
-especially projects that already keep cover metadata in `cover/cover.md` or
-`cover/cover.yaml`.
+especially projects that already keep cover metadata in `cover/cover.md`.
 
 ## Current Status
 
@@ -79,8 +78,7 @@ MyBook/
       base.png
 ```
 
-CoverStudio prefers `cover/cover.md` when it exists, then falls back to
-`cover/cover.yaml`. Markdown cover files should begin with YAML frontmatter:
+Cover control files are Markdown documents that begin with YAML frontmatter:
 
 ```yaml
 ---

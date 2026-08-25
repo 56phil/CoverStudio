@@ -3,28 +3,15 @@ import Yams
 import UniformTypeIdentifiers
 
 struct ProjectManager {
-    /// Binary Cover Metadata/Generator format (.cmg)
-    static let cmgType: UTType = UTType(filenameExtension: "cmg", conformingTo: .data) ?? .data
-
     static let coverContentTypes: [UTType] = [
-        cmgType,
-        .yaml,
-        UTType(filenameExtension: "yml") ?? .yaml,
         UTType(filenameExtension: "md") ?? .plainText,
-        .json
     ]
 
     static func load(from url: URL) throws -> CoverData {
-        let data: CoverData
-        if url.pathExtension.lowercased() == "cmg" {
-            let raw = try Data(contentsOf: url)
-            data = try PropertyListDecoder().decode(CoverData.self, from: raw)
-        } else {
-            let contents = try String(contentsOf: url, encoding: .utf8)
-            let yamlString = try yamlPayload(from: contents, url: url)
-            let decoder = YAMLDecoder()
-            data = try decoder.decode(CoverData.self, from: yamlString)
-        }
+        let contents = try String(contentsOf: url, encoding: .utf8)
+        let yamlString = try yamlPayload(from: contents)
+        let decoder = YAMLDecoder()
+        let data = try decoder.decode(CoverData.self, from: yamlString)
         migrateIfNeeded(data, to: url)
         return data
     }
@@ -33,17 +20,11 @@ struct ProjectManager {
     private static func migrateIfNeeded(_ data: CoverData, to url: URL) {
         guard data.schemaVersion == currentSchemaVersion else { return }
         // Re-read the raw file to check whether the on-disk schema is outdated.
-        let onDiskVersion: Int
-        if url.pathExtension.lowercased() == "cmg" {
-            let raw = (try? Data(contentsOf: url)).flatMap { try? PropertyListDecoder().decode(CoverData.self, from: $0) }
-            onDiskVersion = raw?.schemaVersion ?? 1
-        } else {
-            let contents = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
-            let yaml = (try? yamlPayload(from: contents, url: url)) ?? ""
-            let versionLine = yaml.components(separatedBy: "\n").first { $0.hasPrefix("schema_version:") }
-            let parsed = versionLine.flatMap { Int($0.replacingOccurrences(of: "schema_version:", with: "").trimmingCharacters(in: .whitespaces)) }
-            onDiskVersion = parsed ?? 1
-        }
+        let contents = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+        let yaml = (try? yamlPayload(from: contents)) ?? ""
+        let versionLine = yaml.components(separatedBy: "\n").first { $0.hasPrefix("schema_version:") }
+        let parsed = versionLine.flatMap { Int($0.replacingOccurrences(of: "schema_version:", with: "").trimmingCharacters(in: .whitespaces)) }
+        let onDiskVersion = parsed ?? 1
         guard onDiskVersion < currentSchemaVersion else { return }
         try? save(data, to: url)
     }
@@ -54,27 +35,15 @@ struct ProjectManager {
             withIntermediateDirectories: true
         )
 
-        if url.pathExtension.lowercased() == "cmg" {
-            let encoder = PropertyListEncoder()
-            encoder.outputFormat = .binary
-            let raw = try encoder.encode(data)
-            try raw.write(to: url, options: .atomic)
-            return
-        }
-
+        let existing = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+        let body = markdownBody(from: existing)
         let yamlString = try mergedYAML(for: data, existingAt: url)
-        if url.pathExtension.lowercased() == "md" {
-            let existing = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
-            let body = markdownBody(from: existing)
-            let frontmatter = yamlString.hasSuffix("\n") ? yamlString : "\(yamlString)\n"
-            let markdown = "---\n\(frontmatter)---\n\(body)"
-            try markdown.write(to: url, atomically: true, encoding: .utf8)
-        } else {
-            try yamlString.write(to: url, atomically: true, encoding: .utf8)
-        }
+        let frontmatter = yamlString.hasSuffix("\n") ? yamlString : "\(yamlString)\n"
+        let markdown = "---\n\(frontmatter)---\n\(body)"
+        try markdown.write(to: url, atomically: true, encoding: .utf8)
     }
 
-    /// Resolve a project path relative to the project directory (the folder containing the YAML file).
+    /// Resolve a project path relative to the project directory (the folder containing the cover file).
     static func resolveProjectPath(_ path: String, relativeTo yamlURL: URL?) -> String {
         if path.hasPrefix("/") { return path }
         guard let yamlURL else { return path }
@@ -92,7 +61,7 @@ struct ProjectManager {
         return projectRoot(for: yamlURL).appendingPathComponent(path).path
     }
 
-    /// Resolve an image path relative to the project directory (the folder containing the YAML file)
+    /// Resolve an image path relative to the project directory (the folder containing the cover file)
     static func resolveImagePath(_ imagePath: String, relativeTo yamlURL: URL?) -> String {
         resolveProjectPath(imagePath, relativeTo: yamlURL)
     }
@@ -115,18 +84,27 @@ struct ProjectManager {
         return containingDirectory
     }
 
+    /// The markdown cover file for a project root, if one exists.
     static func preferredCoverFile(in projectRoot: URL) -> URL? {
         let coverDirectory = projectRoot.appendingPathComponent("cover", isDirectory: true)
         let markdownURL = coverDirectory.appendingPathComponent("cover.md")
-        let yamlURL = coverDirectory.appendingPathComponent("cover.yaml")
 
         if FileManager.default.fileExists(atPath: markdownURL.path) {
             return markdownURL
         }
-        if FileManager.default.fileExists(atPath: yamlURL.path) {
-            return yamlURL
-        }
         return nil
+    }
+
+    /// Resolve the cover file for a project root: return the existing cover.md,
+    /// or scaffold a starter cover/cover.md when the project has no cover folder yet.
+    static func resolveCoverFile(in projectRoot: URL) throws -> URL {
+        if let existing = preferredCoverFile(in: projectRoot) {
+            return existing
+        }
+        let coverDirectory = projectRoot.appendingPathComponent("cover", isDirectory: true)
+        let coverURL = coverDirectory.appendingPathComponent("cover.md")
+        try save(CoverData(), to: coverURL)
+        return coverURL
     }
 
     static func defaultCoverFile(in projectRoot: URL) -> URL {
@@ -150,11 +128,7 @@ struct ProjectManager {
         return nil
     }
 
-    private static func yamlPayload(from contents: String, url: URL) throws -> String {
-        guard url.pathExtension.lowercased() == "md" else {
-            return contents
-        }
-
+    private static func yamlPayload(from contents: String) throws -> String {
         let normalized = contents.replacingOccurrences(of: "\r\n", with: "\n")
         guard normalized.hasPrefix("---\n") else {
             throw ProjectManagerError.missingFrontmatter
@@ -191,7 +165,7 @@ struct ProjectManager {
         let encoder = YAMLEncoder()
         let encoded = try encoder.encode(data)
         guard let existingContents = try? String(contentsOf: url, encoding: .utf8),
-              let existingYAML = try? yamlPayload(from: existingContents, url: url),
+              let existingYAML = try? yamlPayload(from: existingContents),
               let existingObject = try? Yams.load(yaml: existingYAML),
               let encodedObject = try? Yams.load(yaml: encoded),
               var existingMap = existingObject as? [String: Any],

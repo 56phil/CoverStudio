@@ -1,7 +1,6 @@
 import SwiftUI
 
 enum InspectorTab: String, CaseIterable {
-    case yaml   = "YAML"
     case fonts  = "Fonts"
     case setup  = "Setup"
     case back   = "Back"
@@ -54,7 +53,6 @@ struct InspectorView: View {
                     case .fonts: FontsTab(data: $data)
                     case .spine: SpineTab(data: $data)
                     case .back: BackTab(data: $data, sourceURL: sourceURL)
-                    case .yaml: YAMLView(data: data)
                     }
                 }
                 .padding()

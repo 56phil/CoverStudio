@@ -6,8 +6,8 @@ import Foundation
 struct CoverStudioDocument: FileDocument {
     var data: CoverData = CoverData()
 
-    static var readableContentTypes: [UTType] = [.yaml, .json]
-    static var writableContentTypes: [UTType] = [.yaml, .json]
+    static var readableContentTypes: [UTType] = [.plainText]
+    static var writableContentTypes: [UTType] = [.plainText]
 
     init() {}
 

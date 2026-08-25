@@ -242,7 +242,15 @@ struct ContentView: View {
             savedProjectRoot = url.path
             savedCoverFilePath = ""
             currentFileURL = nil
-            autoLoadFromProject()
+            do {
+                let coverURL = try ProjectManager.resolveCoverFile(in: url)
+                try loadCoverFile(coverURL)
+            } catch {
+                let alert = NSAlert()
+                alert.messageText = "Could not set up cover file"
+                alert.informativeText = error.localizedDescription
+                alert.runModal()
+            }
         }
     }
 
@@ -264,7 +272,7 @@ struct ContentView: View {
         }
     }
 
-    /// Auto-load the best available cover file from the project (prefers legacy .md, then .yaml)
+    /// Auto-load the cover file from the project root, when one exists.
     private func autoLoadFromProject() {
         guard let root = projectRoot else { return }
         let loadURL = ProjectManager.preferredCoverFile(in: URL(fileURLWithPath: root))

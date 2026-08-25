@@ -93,6 +93,46 @@ final class ProjectManagerTests: XCTestCase {
         )
     }
 
+    func testResolveCoverFileReturnsExistingMarkdown() throws {
+        let coverURL = try makeCoverFile(contents: """
+        ---
+        schema_version: 1
+        title: Existing Book
+        ---
+        """)
+        let bookRoot = ProjectManager.projectRoot(for: coverURL)
+
+        let resolved = try ProjectManager.resolveCoverFile(in: bookRoot)
+
+        XCTAssertEqual(resolved, coverURL)
+    }
+
+    func testResolveCoverFileScaffoldsWhenNoCoverFolderExists() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("CoverStudioTests-\(UUID().uuidString)", isDirectory: true)
+        temporaryRoots.append(root)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+
+        let resolved = try ProjectManager.resolveCoverFile(in: root)
+
+        XCTAssertEqual(
+            resolved,
+            root.appendingPathComponent("cover", isDirectory: true).appendingPathComponent("cover.md")
+        )
+        XCTAssertTrue(FileManager.default.fileExists(atPath: resolved.path))
+
+        let data = try ProjectManager.load(from: resolved)
+        XCTAssertEqual(data.schemaVersion, currentSchemaVersion)
+        XCTAssertEqual(data.bindingType, .pb)
+        XCTAssertEqual(data.trimSize, .sixX9)
+        XCTAssertEqual(data.title, "")
+
+        // Scaffold must be a loadable Markdown file with YAML frontmatter.
+        let contents = try String(contentsOf: resolved, encoding: .utf8)
+        XCTAssertTrue(contents.hasPrefix("---\n"))
+        XCTAssertTrue(contents.contains("schema_version: 2"))
+    }
+
     func testSavingMarkdownPreservesBodyAndUnknownGeneratorKeys() throws {
         let coverURL = try makeCoverFile(contents: """
         ---
