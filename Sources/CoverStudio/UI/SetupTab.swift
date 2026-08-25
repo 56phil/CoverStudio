@@ -109,6 +109,9 @@ struct SetupTab: View {
                             : TrimPreset.hardcoverPresets()
                         ForEach(presets, id: \.self) { preset in Text(preset.label).tag(preset) }
                     }
+                    .onChange(of: data.trimSize) { _, _ in
+                        data.frontCoverImageCentered = true
+                    }
                 }
                 if data.trimSize == .custom {
                     HStack {

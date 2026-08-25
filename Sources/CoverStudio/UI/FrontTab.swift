@@ -62,7 +62,14 @@ struct FrontTab: View {
                     .onDrop(of: [.fileURL], isTargeted: $isDropTargeted) { handleDrop(providers: $0) }
                 }
                 Toggle("Center image", isOn: $data.frontCoverImageCentered)
+                Picker("Fit", selection: $data.frontImageFit) {
+                    ForEach(FrontImageFit.allCases, id: \.self) { Text($0.label).tag($0) }
+                }
+                Text("Auto: cover (scale + crop) when the art aspect is close to the panel, stretch otherwise. A fitted copy is written next to your image when needed.")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
                 OffsetRow("Offset", ox: activeImageOffsetX, oy: activeImageOffsetY)
+                fittedCopyStatus
             }
 
             Section("Text") {
@@ -273,6 +280,20 @@ struct FrontTab: View {
     private func setActiveAuthorScale(_ value: Double) {
         if data.bindingType == .hc { data.hcFrontAuthorScale = value }
         else { data.frontAuthorScale = value }
+    }
+
+    /// Status row: shows when a fitted copy exists for the current image.
+    private var fittedCopyStatus: some View {
+        Group {
+            if let path = FrontImageFitter.relativeFittedPath(for: data.frontCoverImage, relativeTo: sourceURL) {
+                Label(path, systemImage: "checkmark.seal")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .help(path)
+            }
+        }
     }
 
     private func resolvedThumbnail() -> NSImage? {

@@ -145,3 +145,33 @@ enum AuthorPhotoShape: String, Codable, CaseIterable {
         }
     }
 }
+
+/// How the front cover art fills the front panel.
+enum FrontImageFit: String, Codable, CaseIterable {
+    /// Auto: cover-fit when the source aspect is close to the panel, stretch otherwise.
+    case auto
+    /// Scale uniformly to cover the panel, crop the overflow.
+    case cover
+    /// Scale to the exact panel dimensions (non-uniform when aspects differ).
+    case stretch
+
+    var label: String {
+        switch self {
+        case .auto: "Auto"
+        case .cover: "Cover (scale + crop)"
+        case .stretch: "Stretch to exact size"
+        }
+    }
+}
+
+extension FrontImageFit {
+    /// Resolve `.auto` to a concrete mode: cover-fit when the source aspect ratio is within
+    /// 15% of the front panel aspect ratio, stretch otherwise.
+    func resolved(sourceWidth: Int, sourceHeight: Int, panelWidth: Int, panelHeight: Int) -> FrontImageFit {
+        guard self == .auto else { return self }
+        guard sourceWidth > 0, sourceHeight > 0, panelWidth > 0, panelHeight > 0 else { return .cover }
+        let panelAspect = Double(panelWidth) / Double(panelHeight)
+        let sourceAspect = Double(sourceWidth) / Double(sourceHeight)
+        return abs(sourceAspect - panelAspect) / panelAspect <= 0.15 ? .cover : .stretch
+    }
+}

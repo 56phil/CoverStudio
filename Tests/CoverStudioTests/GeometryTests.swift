@@ -27,6 +27,29 @@ final class GeometryTests: XCTestCase {
         XCTAssertEqual(g.totalHeight, CoverGeometry.px(2 * 0.125 + 9.0))
     }
 
+    func testFrontImageRegionCoversOuterEdge() throws {
+        var data = CoverData()
+        data.bindingType = .pb
+        data.trimSize = .sixX9
+        data.pbPageCount = 200
+        data.interiorType = .blackWhite
+        data.paperType = .white
+
+        let g = try computeGeometry(from: data)
+
+        // LTR: image runs from the spine to the outer right edge, bleed included.
+        XCTAssertEqual(g.frontImageLeft, g.spineRight)
+        XCTAssertEqual(g.frontImageLeft + g.frontImageWidth, g.totalWidth)
+        XCTAssertGreaterThan(g.frontImageWidth, g.frontWidth)
+
+        // RTL: image runs from the outer left edge to the spine.
+        data.readingDirection = .rtl
+        let rtl = try computeGeometry(from: data)
+        XCTAssertEqual(rtl.frontImageLeft, 0)
+        XCTAssertEqual(rtl.frontImageLeft + rtl.frontImageWidth, rtl.spineLeft)
+        XCTAssertGreaterThan(rtl.frontImageWidth, rtl.frontWidth)
+    }
+
     func testPaperbackPanelLayout() throws {
         var data = CoverData()
         data.bindingType = .pb

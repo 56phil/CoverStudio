@@ -37,6 +37,7 @@ struct CoverData: Codable, Equatable {
     // Front cover — image
     var frontCoverImage: String = ""
     var frontCoverImageCentered: Bool = false
+    var frontImageFit: FrontImageFit = .auto
     var frontCoverImageOffsetXInches: Double = 0.0
     var frontCoverImageOffsetYInches: Double = 0.0
 
@@ -299,6 +300,7 @@ struct CoverData: Codable, Equatable {
 
         case frontCoverImage = "front_cover_image"
         case frontCoverImageCentered = "front_cover_image_centered"
+        case frontImageFit = "front_image_fit"
         case frontCoverImageOffsetXInches = "front_cover_image_offset_x_inches"
         case frontCoverImageOffsetYInches = "front_cover_image_offset_y_inches"
         case pbFrontImageOffsetXInches = "pb_front_image_offset_x_inches"
@@ -480,6 +482,7 @@ struct CoverData: Codable, Equatable {
 
         frontCoverImage = container.stringOrEmpty(.frontCoverImage)
         frontCoverImageCentered = container.boolOrFalse(.frontCoverImageCentered)
+        frontImageFit = try container.decodeIfPresent(FrontImageFit.self, forKey: .frontImageFit) ?? .auto
         frontCoverImageOffsetXInches = container.bindingDouble(
             canonical: .frontCoverImageOffsetXInches,
             paperback: .pbFrontImageOffsetXInches,

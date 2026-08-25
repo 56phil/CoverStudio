@@ -301,20 +301,28 @@ struct CoverRenderer {
 
         let g = geometry
         let imageRect = CGRect(
-            x: CGFloat(g.effectiveFrontLeft),
+            x: CGFloat(g.frontImageLeft),
             y: 0,
-            width: CGFloat(g.frontWidth),
+            width: CGFloat(g.frontImageWidth),
             height: CGFloat(g.totalHeight)
         )
 
         ctx.saveGState(); ctx.clip(to: imageRect)
-        let scale = max(imageRect.width / CGFloat(cg.width), imageRect.height / CGFloat(cg.height))
-        let sw = CGFloat(cg.width) * scale, sh = CGFloat(cg.height) * scale
-        let ox = data.frontCoverImageCentered ? (sw - imageRect.width)/2
-                : (sw - imageRect.width)/2 + CGFloat(data.resolvedImageOffsetX()) * CGFloat(geometry.dpi)
-        let oy = data.frontCoverImageCentered ? (sh - imageRect.height)/2
-                : (sh - imageRect.height)/2 + CGFloat(data.resolvedImageOffsetY()) * CGFloat(geometry.dpi)
-        ctx.draw(cg, in: CGRect(x: imageRect.minX - ox, y: imageRect.minY - oy, width: sw, height: sh))
+        let fit = data.frontImageFit.resolved(
+            sourceWidth: cg.width, sourceHeight: cg.height,
+            panelWidth: Int(imageRect.width), panelHeight: Int(imageRect.height)
+        )
+        if fit == .stretch {
+            ctx.draw(cg, in: imageRect)
+        } else {
+            let scale = max(imageRect.width / CGFloat(cg.width), imageRect.height / CGFloat(cg.height))
+            let sw = CGFloat(cg.width) * scale, sh = CGFloat(cg.height) * scale
+            let ox = data.frontCoverImageCentered ? (sw - imageRect.width)/2
+                    : (sw - imageRect.width)/2 + CGFloat(data.resolvedImageOffsetX()) * CGFloat(geometry.dpi)
+            let oy = data.frontCoverImageCentered ? (sh - imageRect.height)/2
+                    : (sh - imageRect.height)/2 + CGFloat(data.resolvedImageOffsetY()) * CGFloat(geometry.dpi)
+            ctx.draw(cg, in: CGRect(x: imageRect.minX - ox, y: imageRect.minY - oy, width: sw, height: sh))
+        }
         ctx.restoreGState()
     }
 

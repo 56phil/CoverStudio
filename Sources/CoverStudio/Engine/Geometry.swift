@@ -48,6 +48,11 @@ struct CoverGeometry {
     var effectiveBackRight: Int { readingDirection == .rtl ? frontRight : backRight }
     var effectiveFrontLeft: Int { readingDirection == .rtl ? backLeft : frontLeft }
     var effectiveFrontRight: Int { readingDirection == .rtl ? backRight : frontRight }
+
+    // Front image region: the outer cover edge to the spine, bleed/wrap included.
+    // Art must bleed past the trim line, so the image covers the full front side.
+    var frontImageLeft: Int { readingDirection == .rtl ? 0 : spineRight }
+    var frontImageWidth: Int { readingDirection == .rtl ? spineLeft : totalWidth - spineRight }
     var backBarcodeZoneBottom: Int {
         trimBottom - Self.px(CoverLayoutDefaults.backBarcodeBottomMarginInches)
     }

@@ -84,6 +84,9 @@ struct ContentView: View {
                 autoLoadSavedCover()
             }
         }
+        .onChange(of: document.data) { _, _ in
+            updateFittedImage()
+        }
         .onChange(of: selectedTab) { _, tab in
             savedSelectedTab = tab.rawValue
         }
@@ -307,6 +310,24 @@ struct ContentView: View {
     private func persistCurrentCoverFile(_ url: URL) {
         savedCoverFilePath = url.path
         savedProjectRoot = ProjectManager.projectRoot(for: url).path
+    }
+
+    /// Regenerate the fitted front-image copy after the source image or panel geometry
+    /// changed (trim switch, page count, binding, template dimensions).
+    private func updateFittedImage() {
+        do {
+            let geometry = try computeGeometry(from: document.data)
+            FrontImageFitter.updateFittedImage(
+                sourcePath: document.data.frontCoverImage,
+                fit: document.data.frontImageFit,
+                panelWidth: geometry.frontImageWidth,
+                panelHeight: geometry.totalHeight,
+                relativeTo: currentFileURL
+            )
+        } catch {
+            // Invalid or incomplete geometry (e.g. hardcover template not yet set):
+            // nothing to fit yet; the renderer will show its own error state.
+        }
     }
 
     private func openExportOptions() {
