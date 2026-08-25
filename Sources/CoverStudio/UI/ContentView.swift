@@ -6,11 +6,7 @@ struct ContentView: View {
     @Binding var document: CoverStudioDocument
     @Binding var currentFileURL: URL?
 
-    @State private var previewImage: CGImage?
-    @State private var frontCropImage: CGImage?
     @State private var selectedTab: InspectorTab = .setup
-    @State private var errorMessage: String?
-    @State private var renderTask: Task<Void, Never>?
     @AppStorage("showGuides") private var showGuides: Bool = true
     @State private var showExportOptions: Bool = false
     @AppStorage("exportPDF") private var exportPDF: Bool = true
@@ -19,16 +15,12 @@ struct ContentView: View {
     @AppStorage("exportBaseName") private var exportBaseName: String = "cover"
     @AppStorage("exportPrependBinding") private var exportPrependBinding: Bool = false
     @AppStorage("exportDirectoryPath") private var exportDirectoryPath: String = ""
-    @State private var coverWidthInches: Double = 9.25
-    @State private var coverHeightInches: Double = 12.125
-    @State private var currentGeometry: CoverGeometry?
     @AppStorage("projectRoot") private var savedProjectRoot: String = ""
     @AppStorage("coverFilePath") private var savedCoverFilePath: String = ""
     @AppStorage("selectedTab") private var savedSelectedTab: String = InspectorTab.setup.rawValue
 
     @Environment(\.undoManager) private var undoManager
     @StateObject private var undoCoordinator = UndoCoordinator()
-    @State private var validationIssues: [Validation.Issue] = []
     @State private var previewResetID = UUID()
     @State private var savedData: CoverData?
 
@@ -69,38 +61,19 @@ struct ContentView: View {
                 }
             ), selectedTab: $selectedTab, projectRoot: projectRoot, sourceURL: currentFileURL, onSelectProjectRoot: selectProjectRoot)
                 .navigationSplitViewColumnWidth(min: 320, ideal: inspectorIdealWidth, max: inspectorMaxWidth)
-                .onChange(of: document.data) { _, _ in
-                    scheduleRender()
-                }
         } detail: {
-            // Right: Live preview
-            VStack(spacing: 0) {
-                HStack {
-                    Toggle("Guides", isOn: $showGuides)
-                        .onChange(of: showGuides) { _, _ in scheduleRender() }
-                    Spacer()
-                    Button("Load", systemImage: "folder") {
-                        loadDocument()
-                    }
-                    Button("Reload", systemImage: "arrow.clockwise") {
-                        reloadDocument()
-                    }
-                    Button("Save", systemImage: "square.and.arrow.down") {
-                        saveDocument()
-                    }
-                    Button("Export\u{2026}", systemImage: "square.and.arrow.up") {
-                        openExportOptions()
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color(white: 0.12))
-
-                PreviewPane(image: previewImage, errorMessage: errorMessage,
-                             widthInches: coverWidthInches, heightInches: coverHeightInches)
-                    .id(previewResetID)
-                StatusLine(data: document.data, projectRoot: projectRoot, validationIssues: validationIssues)
-            }
+            // Right: Live preview — isolated so render-state changes don't re-render InspectorView
+            PreviewDetailView(
+                data: document.data,
+                showGuides: $showGuides,
+                sourceURL: currentFileURL,
+                projectRoot: projectRoot,
+                resetID: previewResetID,
+                onLoad: loadDocument,
+                onReload: reloadDocument,
+                onSave: saveDocument,
+                onExport: openExportOptions
+            )
         }
         .onAppear {
             setupUndoCoordinator()
@@ -110,7 +83,6 @@ struct ContentView: View {
             if currentFileURL == nil {
                 autoLoadSavedCover()
             }
-            scheduleRender()
         }
         .onChange(of: selectedTab) { _, tab in
             savedSelectedTab = tab.rawValue
@@ -144,46 +116,6 @@ struct ContentView: View {
         ))
     }
 
-    private func scheduleRender() {
-        renderTask?.cancel()
-        renderTask = Task {
-            try? await Task.sleep(for: .milliseconds(300))
-            guard !Task.isCancelled else { return }
-            await renderCover()
-        }
-    }
-
-    private func renderCover() async {
-        let data = document.data
-        let sourceURL = currentFileURL
-        let guides = showGuides
-
-        validationIssues = Validation.validate(data, sourceURL: sourceURL)
-        do {
-            let geometry = try computeGeometry(from: data)
-            let renderer = CoverRenderer(data: data, geometry: geometry, sourceURL: sourceURL)
-
-            let images: (CGImage?, CGImage?) = await withCheckedContinuation { continuation in
-                DispatchQueue.global(qos: .userInitiated).async {
-                    let full = renderer.renderFullCover(includeGuides: guides)
-                    let front = renderer.renderFrontCrop()
-                    continuation.resume(returning: (full, front))
-                }
-            }
-
-            guard !Task.isCancelled else { return }
-            previewImage = images.0
-            frontCropImage = images.1
-            coverWidthInches = geometry.totalWidthInches
-            coverHeightInches = geometry.totalHeightInches
-            currentGeometry = geometry
-            errorMessage = nil
-        } catch {
-            errorMessage = error.localizedDescription
-            currentGeometry = nil
-        }
-    }
-
     private func saveDocument() {
         commitPendingFieldEdits()
         DispatchQueue.main.async {
@@ -210,7 +142,6 @@ struct ContentView: View {
         if panel.runModal() == .OK, let url = panel.url {
             do {
                 try loadCoverFile(url)
-                scheduleRender()
             } catch {
                 let alert = NSAlert()
                 alert.messageText = "Could not load file"
@@ -246,7 +177,6 @@ struct ContentView: View {
 
         do {
             try loadCoverFile(url)
-            scheduleRender()
         } catch {
             let alert = NSAlert()
             alert.messageText = "Could not reload file"
@@ -462,6 +392,88 @@ struct ContentView: View {
         alert.messageText = title
         alert.informativeText = message
         alert.runModal()
+    }
+}
+
+// ── PreviewDetailView ────────────────────────────────────────────────────────
+// Isolated child view that owns all render state so that completing a render
+// does not re-run ContentView.body and does not disrupt focused TextFields in
+// InspectorView.
+private struct PreviewDetailView: View {
+    let data: CoverData
+    @Binding var showGuides: Bool
+    let sourceURL: URL?
+    let projectRoot: String?
+    let resetID: UUID
+    var onLoad: () -> Void
+    var onReload: () -> Void
+    var onSave: () -> Void
+    var onExport: () -> Void
+
+    @State private var previewImage: CGImage?
+    @State private var renderTask: Task<Void, Never>?
+    @State private var coverWidthInches: Double = 9.25
+    @State private var coverHeightInches: Double = 12.125
+    @State private var errorMessage: String?
+    @State private var validationIssues: [Validation.Issue] = []
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Toggle("Guides", isOn: $showGuides)
+                Spacer()
+                Button("Load", systemImage: "folder") { onLoad() }
+                Button("Reload", systemImage: "arrow.clockwise") { onReload() }
+                Button("Save", systemImage: "square.and.arrow.down") { onSave() }
+                Button("Export\u{2026}", systemImage: "square.and.arrow.up") { onExport() }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Color(white: 0.12))
+
+            PreviewPane(image: previewImage, errorMessage: errorMessage,
+                        widthInches: coverWidthInches, heightInches: coverHeightInches)
+                .id(resetID)
+            StatusLine(data: data, projectRoot: projectRoot, validationIssues: validationIssues)
+        }
+        .onChange(of: data) { _, _ in scheduleRender() }
+        .onChange(of: showGuides) { _, _ in scheduleRender() }
+        .onAppear { scheduleRender() }
+    }
+
+    private func scheduleRender() {
+        renderTask?.cancel()
+        renderTask = Task {
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            await renderCover()
+        }
+    }
+
+    private func renderCover() async {
+        let capturedData = data
+        let capturedSourceURL = sourceURL
+        let guides = showGuides
+
+        validationIssues = Validation.validate(capturedData, sourceURL: capturedSourceURL)
+        do {
+            let geometry = try computeGeometry(from: capturedData)
+            let renderer = CoverRenderer(data: capturedData, geometry: geometry, sourceURL: capturedSourceURL)
+
+            let image: CGImage? = await withCheckedContinuation { continuation in
+                DispatchQueue.global(qos: .userInitiated).async {
+                    continuation.resume(returning: renderer.renderFullCover(includeGuides: guides))
+                }
+            }
+
+            guard !Task.isCancelled else { return }
+            previewImage = image
+            coverWidthInches = geometry.totalWidthInches
+            coverHeightInches = geometry.totalHeightInches
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }
 

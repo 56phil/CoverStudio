@@ -183,6 +183,8 @@ struct CoverData: Codable, Equatable {
     var authorPhotoOffsetXInches: Double = 0.0
     var authorPhotoOffsetYInches: Double = 0.0
     var authorPhotoShape: AuthorPhotoShape = .circle
+    var authorPhotoCropOffsetX: Double = 0.0  // -1…+1, shifts crop window left/right within source image
+    var authorPhotoCropOffsetY: Double = 0.0  // -1…+1, shifts crop window up/down within source image
 
     // Colors
     var colorTitle: String = "#daa520"
@@ -266,6 +268,8 @@ struct CoverData: Codable, Equatable {
         authorPhotoScaleInches = CoverLayoutDefaults.backAuthorPhotoSizeInches
         authorPhotoOffsetXInches = 0.0
         authorPhotoOffsetYInches = 0.0
+        authorPhotoCropOffsetX = 0.0
+        authorPhotoCropOffsetY = 0.0
     }
 
     // ── Coding Keys — bridge snake_case (legacy Python) and camelCase (Swift) ──
@@ -423,6 +427,8 @@ struct CoverData: Codable, Equatable {
         case authorPhotoOffsetYInches = "author_photo_offset_y_inches"
         case authorPhotoShape = "author_photo_shape"
         case authorPhotoCircular = "author_photo_circular"
+        case authorPhotoCropOffsetX = "author_photo_crop_offset_x"
+        case authorPhotoCropOffsetY = "author_photo_crop_offset_y"
 
         case colorTitle = "color_title"
         case colorAccent = "color_accent"
@@ -713,6 +719,8 @@ struct CoverData: Codable, Equatable {
         )
         authorPhotoShape = try container.decodeIfPresent(AuthorPhotoShape.self, forKey: .authorPhotoShape)
             ?? (container.boolOrDefault(.authorPhotoCircular, defaultValue: true) ? .circle : .square)
+        authorPhotoCropOffsetX = container.doubleOrDefault(.authorPhotoCropOffsetX, defaultValue: 0.0)
+        authorPhotoCropOffsetY = container.doubleOrDefault(.authorPhotoCropOffsetY, defaultValue: 0.0)
 
         colorTitle = container.stringOrDefault(.colorTitle, defaultValue: "#daa520")
         colorAccent = container.stringOrDefault(.colorAccent, defaultValue: "#eec448")
@@ -861,6 +869,8 @@ struct CoverData: Codable, Equatable {
         try container.encode(authorPhotoOffsetXInches, forKey: .authorPhotoOffsetXInches)
         try container.encode(authorPhotoOffsetYInches, forKey: .authorPhotoOffsetYInches)
         try container.encode(authorPhotoShape, forKey: .authorPhotoShape)
+        try container.encode(authorPhotoCropOffsetX, forKey: .authorPhotoCropOffsetX)
+        try container.encode(authorPhotoCropOffsetY, forKey: .authorPhotoCropOffsetY)
         if bindingType == .hc {
             try container.encode(authorPhotoOffsetXInches, forKey: .hcBackAuthorImageOffsetXInches)
             try container.encode(authorPhotoOffsetYInches, forKey: .hcBackAuthorImageOffsetYInches)

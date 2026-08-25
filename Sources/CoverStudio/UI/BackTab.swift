@@ -53,6 +53,9 @@ struct BackTab: View {
                     }
                 }
                 .pickerStyle(.segmented)
+                if data.authorPhotoShape == .circle || data.authorPhotoShape == .square {
+                    CropPositionRow(cropX: $data.authorPhotoCropOffsetX, cropY: $data.authorPhotoCropOffsetY)
+                }
             }
         }
     }
@@ -95,6 +98,30 @@ struct BackTab: View {
         if panel.runModal() == .OK, let url = panel.url {
             data.authorPhoto = ProjectManager.makeRelativePath(url, relativeTo: sourceURL)
         }
+    }
+}
+
+struct CropPositionRow: View {
+    @Binding var cropX: Double
+    @Binding var cropY: Double
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Crop position").font(.caption).foregroundColor(.secondary)
+            HStack(spacing: 8) {
+                Text("H").frame(width: 14, alignment: .leading).font(.caption.monospacedDigit())
+                Slider(value: $cropX, in: -1...1)
+                Button("↺") { cropX = 0 }
+                    .buttonStyle(.borderless).controlSize(.small)
+            }
+            HStack(spacing: 8) {
+                Text("V").frame(width: 14, alignment: .leading).font(.caption.monospacedDigit())
+                Slider(value: $cropY, in: -1...1)
+                Button("↺") { cropY = 0 }
+                    .buttonStyle(.borderless).controlSize(.small)
+            }
+        }
+        .padding(.top, 2)
     }
 }
 

@@ -166,8 +166,11 @@ struct CoverRenderer {
                 switch data.authorPhotoShape {
                 case .circle, .square:
                     let sz = min(cg.width, cg.height)
-                    let sx = (cg.width - sz)/2, sy = (cg.height - sz)/2
-                    if let cropped = cg.cropping(to: CGRect(x: sx, y: sy, width: sz, height: sz)) {
+                    let maxShiftX = CGFloat(cg.width - sz) / 2
+                    let maxShiftY = CGFloat(cg.height - sz) / 2
+                    let sx = min(max(maxShiftX * (1 + CGFloat(data.authorPhotoCropOffsetX)), 0), maxShiftX * 2)
+                    let sy = min(max(maxShiftY * (1 + CGFloat(data.authorPhotoCropOffsetY)), 0), maxShiftY * 2)
+                    if let cropped = cg.cropping(to: CGRect(x: sx, y: sy, width: CGFloat(sz), height: CGFloat(sz))) {
                         ctx.saveGState()
                         if data.authorPhotoShape == .circle {
                             let clip = CGPath(roundedRect: rect, cornerWidth: photoSize/2, cornerHeight: photoSize/2, transform: nil)

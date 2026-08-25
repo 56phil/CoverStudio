@@ -1,12 +1,12 @@
 import SwiftUI
 
 enum InspectorTab: String, CaseIterable {
-    case setup  = "Setup"
-    case front  = "Front"
-    case fonts  = "Fonts"
-    case spine  = "Spine"
-    case back   = "Back"
     case yaml   = "YAML"
+    case fonts  = "Fonts"
+    case setup  = "Setup"
+    case back   = "Back"
+    case spine  = "Spine"
+    case front  = "Front"
 
     func next() -> InspectorTab {
         let all = Self.allCases
