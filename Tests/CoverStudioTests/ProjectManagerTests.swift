@@ -284,6 +284,59 @@ final class ProjectManagerTests: XCTestCase {
         XCTAssertEqual(data.authorPhotoOffsetXInches, -0.25, accuracy: 0.0001)
     }
 
+    func testHardcoverBlurbAndBioDefaultToCanonicalValuesWhenAbsent() throws {
+        let coverURL = try makeCoverFile(contents: """
+        ---
+        schema_version: 1
+        binding_type: hc
+        title: Legacy Back Cover
+        blurb: Shared blurb.
+        author_bio: Shared bio.
+        ---
+        """)
+
+        let data = try ProjectManager.load(from: coverURL)
+
+        XCTAssertEqual(data.blurb, "Shared blurb.")
+        XCTAssertEqual(data.hcBlurb, "Shared blurb.")
+        XCTAssertEqual(data.authorBio, "Shared bio.")
+        XCTAssertEqual(data.hcAuthorBio, "Shared bio.")
+        XCTAssertEqual(data.resolvedBlurb(), "Shared blurb.")
+        XCTAssertEqual(data.resolvedAuthorBio(), "Shared bio.")
+    }
+
+    func testHardcoverBlurbAndBioPersistIndependentlyOfPaperback() throws {
+        let coverURL = try makeCoverFile(contents: """
+        ---
+        schema_version: 1
+        binding_type: hc
+        title: Split Back Copy
+        blurb: Paperback blurb.
+        hc_blurb: Hardcover blurb.
+        author_bio: Paperback bio.
+        hc_author_bio: Hardcover bio.
+        ---
+        """)
+
+        var data = try ProjectManager.load(from: coverURL)
+
+        XCTAssertEqual(data.resolvedBlurb(), "Hardcover blurb.")
+        XCTAssertEqual(data.resolvedAuthorBio(), "Hardcover bio.")
+        data.bindingType = .pb
+        XCTAssertEqual(data.resolvedBlurb(), "Paperback blurb.")
+        XCTAssertEqual(data.resolvedAuthorBio(), "Paperback bio.")
+
+        data.hcBlurb = "Revised hardcover blurb."
+        data.hcAuthorBio = "Revised hardcover bio."
+        try ProjectManager.save(data, to: coverURL)
+
+        let reloaded = try ProjectManager.load(from: coverURL)
+        XCTAssertEqual(reloaded.blurb, "Paperback blurb.")
+        XCTAssertEqual(reloaded.hcBlurb, "Revised hardcover blurb.")
+        XCTAssertEqual(reloaded.authorBio, "Paperback bio.")
+        XCTAssertEqual(reloaded.hcAuthorBio, "Revised hardcover bio.")
+    }
+
     func testSavingHardcoverUpdatesBindingSpecificBackKeys() throws {
         let coverURL = try makeCoverFile(contents: """
         ---

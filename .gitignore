@@ -9,3 +9,4 @@ DerivedData/
 *.xcodeproj/xcuserdata/
 *.swiftpm/
 *.claude/
+.serena/

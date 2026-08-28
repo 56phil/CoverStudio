@@ -150,6 +150,12 @@ struct CoverData: Codable, Equatable {
         if bindingType == .hc { return hcFrontImageOffsetYInches }
         return frontCoverImageOffsetYInches
     }
+    func resolvedBlurb() -> String {
+        bindingType == .hc ? hcBlurb : blurb
+    }
+    func resolvedAuthorBio() -> String {
+        bindingType == .hc ? hcAuthorBio : authorBio
+    }
 
     // Spine
     var spineText: Bool = true
@@ -161,8 +167,9 @@ struct CoverData: Codable, Equatable {
     var spineAuthorOffsetXInches: Double = 0.0
     var spineAuthorOffsetYInches: Double = 0.0
 
-    // Back cover — text
+    // Back cover — text (blurb/bio are per-binding; geometry offsets below are binding-routed at decode)
     var blurb: String = ""
+    var hcBlurb: String = ""
     var blurbOffsetXInches: Double = 0.0
     var blurbOffsetYInches: Double = 0.0
     var blurbWidthInches: Double = 0.0
@@ -173,6 +180,7 @@ struct CoverData: Codable, Equatable {
     var quoteAttributionOffsetXInches: Double = 0.0
     var quoteAttributionOffsetYInches: Double = 0.0
     var authorBio: String = ""
+    var hcAuthorBio: String = ""
     var authorBioOffsetXInches: Double = 0.0
     var authorBioOffsetYInches: Double = 0.0
     var authorBioWidthInches: Double = 0.0
@@ -412,6 +420,9 @@ struct CoverData: Codable, Equatable {
         case blurb
         case blurbOffsetXInches = "blurb_offset_x_inches"
         case blurbOffsetYInches = "blurb_offset_y_inches"
+        case hcBlurb = "hc_blurb"
+        case hcAuthorBio = "hc_author_bio"
+
         case quote
         case quoteAttribution = "quote_attribution"
         case quoteOffsetXInches = "quote_offset_x_inches"
@@ -461,9 +472,11 @@ struct CoverData: Codable, Equatable {
         _ = fileSchemaVersion  // retained for future per-version migration logic
 
         bindingType = try container.decodeIfPresent(BindingType.self, forKey: .bindingType) ?? .pb
-        interiorType = try container.decodeIfPresent(InteriorType.self, forKey: .interiorType) ?? .blackWhite
+        interiorType =
+            try container.decodeIfPresent(InteriorType.self, forKey: .interiorType) ?? .blackWhite
         paperType = try container.decodeIfPresent(PaperType.self, forKey: .paperType) ?? .white
-        readingDirection = try container.decodeIfPresent(ReadingDirection.self, forKey: .readingDirection) ?? .ltr
+        readingDirection =
+            try container.decodeIfPresent(ReadingDirection.self, forKey: .readingDirection) ?? .ltr
 
         platformPreset = try container.decodeIfPresent(Bool.self, forKey: .platformPreset) ?? true
         trimSize = try container.decodeTrimPreset(forKey: .trimSize) ?? .sixX9
@@ -482,7 +495,8 @@ struct CoverData: Codable, Equatable {
 
         frontCoverImage = container.stringOrEmpty(.frontCoverImage)
         frontCoverImageCentered = container.boolOrFalse(.frontCoverImageCentered)
-        frontImageFit = try container.decodeIfPresent(FrontImageFit.self, forKey: .frontImageFit) ?? .auto
+        frontImageFit =
+            try container.decodeIfPresent(FrontImageFit.self, forKey: .frontImageFit) ?? .auto
         frontCoverImageOffsetXInches = container.bindingDouble(
             canonical: .frontCoverImageOffsetXInches,
             paperback: .pbFrontImageOffsetXInches,
@@ -592,16 +606,28 @@ struct CoverData: Codable, Equatable {
         hcFrontImageOffsetYInches = container.doubleOrZero(.hcFrontImageOffsetYInches)
         hcFrontTitleOffsetXInches = container.doubleOrZero(.hcFrontTitleOffsetXInches)
         hcFrontTitleOffsetYInches = container.doubleOrZero(.hcFrontTitleOffsetYInches)
-        hcFrontTitleCenterX = container.boolOrDefault(.hcFrontTitleCenterX, defaultValue: container.boolOrDefault(.hcFrontTitleCentered, defaultValue: false))
-        hcFrontTitleCenterY = container.boolOrDefault(.hcFrontTitleCenterY, defaultValue: container.boolOrDefault(.hcFrontTitleCentered, defaultValue: false))
+        hcFrontTitleCenterX = container.boolOrDefault(
+            .hcFrontTitleCenterX,
+            defaultValue: container.boolOrDefault(.hcFrontTitleCentered, defaultValue: false))
+        hcFrontTitleCenterY = container.boolOrDefault(
+            .hcFrontTitleCenterY,
+            defaultValue: container.boolOrDefault(.hcFrontTitleCentered, defaultValue: false))
         hcFrontSubtitleOffsetXInches = container.doubleOrZero(.hcFrontSubtitleOffsetXInches)
         hcFrontSubtitleOffsetYInches = container.doubleOrZero(.hcFrontSubtitleOffsetYInches)
-        hcFrontSubtitleCenterX = container.boolOrDefault(.hcFrontSubtitleCenterX, defaultValue: container.boolOrDefault(.hcFrontSubtitleCentered, defaultValue: false))
-        hcFrontSubtitleCenterY = container.boolOrDefault(.hcFrontSubtitleCenterY, defaultValue: container.boolOrDefault(.hcFrontSubtitleCentered, defaultValue: false))
+        hcFrontSubtitleCenterX = container.boolOrDefault(
+            .hcFrontSubtitleCenterX,
+            defaultValue: container.boolOrDefault(.hcFrontSubtitleCentered, defaultValue: false))
+        hcFrontSubtitleCenterY = container.boolOrDefault(
+            .hcFrontSubtitleCenterY,
+            defaultValue: container.boolOrDefault(.hcFrontSubtitleCentered, defaultValue: false))
         hcFrontAuthorOffsetXInches = container.doubleOrZero(.hcFrontAuthorOffsetXInches)
         hcFrontAuthorOffsetYInches = container.doubleOrZero(.hcFrontAuthorOffsetYInches)
-        hcFrontAuthorCenterX = container.boolOrDefault(.hcFrontAuthorCenterX, defaultValue: container.boolOrDefault(.hcFrontAuthorCentered, defaultValue: false))
-        hcFrontAuthorCenterY = container.boolOrDefault(.hcFrontAuthorCenterY, defaultValue: container.boolOrDefault(.hcFrontAuthorCentered, defaultValue: false))
+        hcFrontAuthorCenterX = container.boolOrDefault(
+            .hcFrontAuthorCenterX,
+            defaultValue: container.boolOrDefault(.hcFrontAuthorCentered, defaultValue: false))
+        hcFrontAuthorCenterY = container.boolOrDefault(
+            .hcFrontAuthorCenterY,
+            defaultValue: container.boolOrDefault(.hcFrontAuthorCentered, defaultValue: false))
         hcFrontTitleScale = container.doubleOrOne(.hcFrontTitleScale)
         hcFrontSubtitleScale = container.doubleOrDefault(.hcFrontSubtitleScale, defaultValue: 1.0)
         hcFrontAuthorScale = container.doubleOrOne(.hcFrontAuthorScale)
@@ -639,6 +665,7 @@ struct CoverData: Codable, Equatable {
         )
 
         blurb = container.stringOrEmpty(.blurb)
+        hcBlurb = container.stringOrDefault(.hcBlurb, defaultValue: blurb)
         blurbOffsetXInches = container.bindingDouble(
             canonical: .blurbOffsetXInches,
             paperback: .pbBackBlurbOffsetXInches,
@@ -674,6 +701,7 @@ struct CoverData: Codable, Equatable {
         quoteAttributionOffsetXInches = container.doubleOrZero(.quoteAttributionOffsetXInches)
         quoteAttributionOffsetYInches = container.doubleOrZero(.quoteAttributionOffsetYInches)
         authorBio = container.stringOrEmpty(.authorBio)
+        hcAuthorBio = container.stringOrDefault(.hcAuthorBio, defaultValue: authorBio)
         authorBioOffsetXInches = container.bindingDouble(
             canonical: .authorBioOffsetXInches,
             paperback: .pbBackAuthorBioOffsetXInches,
@@ -720,10 +748,14 @@ struct CoverData: Codable, Equatable {
             bindingType: bindingType,
             fallback: .backAuthorImageOffsetYInches
         )
-        authorPhotoShape = try container.decodeIfPresent(AuthorPhotoShape.self, forKey: .authorPhotoShape)
-            ?? (container.boolOrDefault(.authorPhotoCircular, defaultValue: true) ? .circle : .square)
-        authorPhotoCropOffsetX = container.doubleOrDefault(.authorPhotoCropOffsetX, defaultValue: 0.0)
-        authorPhotoCropOffsetY = container.doubleOrDefault(.authorPhotoCropOffsetY, defaultValue: 0.0)
+        authorPhotoShape =
+            try container.decodeIfPresent(AuthorPhotoShape.self, forKey: .authorPhotoShape)
+            ?? (container.boolOrDefault(.authorPhotoCircular, defaultValue: true)
+                ? .circle : .square)
+        authorPhotoCropOffsetX = container.doubleOrDefault(
+            .authorPhotoCropOffsetX, defaultValue: 0.0)
+        authorPhotoCropOffsetY = container.doubleOrDefault(
+            .authorPhotoCropOffsetY, defaultValue: 0.0)
 
         colorTitle = container.stringOrDefault(.colorTitle, defaultValue: "#daa520")
         colorAccent = container.stringOrDefault(.colorAccent, defaultValue: "#eec448")
@@ -735,10 +767,14 @@ struct CoverData: Codable, Equatable {
         fontRegular = container.stringOrEmpty(.fontRegular)
         fontItalic = container.stringOrEmpty(.fontItalic)
 
-        templateFullCoverWidth = try container.decodeIfPresent(Double.self, forKey: .templateFullCoverWidth)
-        templateFullCoverHeight = try container.decodeIfPresent(Double.self, forKey: .templateFullCoverHeight)
-        templateFrontCoverWidth = try container.decodeIfPresent(Double.self, forKey: .templateFrontCoverWidth)
-        templateFrontCoverHeight = try container.decodeIfPresent(Double.self, forKey: .templateFrontCoverHeight)
+        templateFullCoverWidth = try container.decodeIfPresent(
+            Double.self, forKey: .templateFullCoverWidth)
+        templateFullCoverHeight = try container.decodeIfPresent(
+            Double.self, forKey: .templateFullCoverHeight)
+        templateFrontCoverWidth = try container.decodeIfPresent(
+            Double.self, forKey: .templateFrontCoverWidth)
+        templateFrontCoverHeight = try container.decodeIfPresent(
+            Double.self, forKey: .templateFrontCoverHeight)
         templateSpineWidth = try container.decodeIfPresent(Double.self, forKey: .templateSpineWidth)
         templateHingeWidth = try container.decodeIfPresent(Double.self, forKey: .templateHingeWidth)
         templateWrapWidth = try container.decodeIfPresent(Double.self, forKey: .templateWrapWidth)
@@ -828,6 +864,7 @@ struct CoverData: Codable, Equatable {
         try container.encode(spineAuthorOffsetXInches, forKey: .spineAuthorOffsetXInches)
         try container.encode(spineAuthorOffsetYInches, forKey: .spineAuthorOffsetYInches)
         try container.encode(blurb, forKey: .blurb)
+        try container.encode(hcBlurb, forKey: .hcBlurb)
         try container.encode(blurbOffsetXInches, forKey: .blurbOffsetXInches)
         try container.encode(blurbOffsetYInches, forKey: .blurbOffsetYInches)
         try container.encode(blurbWidthInches, forKey: .blurbWidthInches)
@@ -854,6 +891,7 @@ struct CoverData: Codable, Equatable {
         try container.encode(quoteAttributionOffsetXInches, forKey: .quoteAttributionOffsetXInches)
         try container.encode(quoteAttributionOffsetYInches, forKey: .quoteAttributionOffsetYInches)
         try container.encode(authorBio, forKey: .authorBio)
+        try container.encode(hcAuthorBio, forKey: .hcAuthorBio)
         try container.encode(authorBioOffsetXInches, forKey: .authorBioOffsetXInches)
         try container.encode(authorBioOffsetYInches, forKey: .authorBioOffsetYInches)
         try container.encode(authorBioWidthInches, forKey: .authorBioWidthInches)
