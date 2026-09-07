@@ -154,12 +154,16 @@ enum FrontImageFit: String, Codable, CaseIterable {
     case cover
     /// Scale to the exact panel dimensions (non-uniform when aspects differ).
     case stretch
+    /// Scale uniformly so the WHOLE image is visible; panel letterboxed with the
+    /// spine color where the image does not reach.
+    case fit
 
     var label: String {
         switch self {
         case .auto: "Auto"
         case .cover: "Cover (scale + crop)"
         case .stretch: "Stretch to exact size"
+        case .fit: "Fit (show all, no crop)"
         }
     }
 }
@@ -167,9 +171,13 @@ enum FrontImageFit: String, Codable, CaseIterable {
 extension FrontImageFit {
     /// Resolve `.auto` to a concrete mode: cover-fit when the source aspect ratio is within
     /// 15% of the front panel aspect ratio, stretch otherwise.
-    func resolved(sourceWidth: Int, sourceHeight: Int, panelWidth: Int, panelHeight: Int) -> FrontImageFit {
+    func resolved(sourceWidth: Int, sourceHeight: Int, panelWidth: Int, panelHeight: Int)
+        -> FrontImageFit
+    {
         guard self == .auto else { return self }
-        guard sourceWidth > 0, sourceHeight > 0, panelWidth > 0, panelHeight > 0 else { return .cover }
+        guard sourceWidth > 0, sourceHeight > 0, panelWidth > 0, panelHeight > 0 else {
+            return .cover
+        }
         let panelAspect = Double(panelWidth) / Double(panelHeight)
         let sourceAspect = Double(sourceWidth) / Double(sourceHeight)
         return abs(sourceAspect - panelAspect) / panelAspect <= 0.15 ? .cover : .stretch

@@ -99,7 +99,7 @@ struct CoverRenderer {
 
   let spineColor = resolveSpineColor()
   drawBack(ctx: ctx, spineColor: spineColor)
-  drawFront(ctx: ctx)
+  drawFront(ctx: ctx, spineColor: spineColor)
   drawSpine(ctx: ctx, spineColor: spineColor)
   if includeGuides { drawGuides(ctx: ctx) }
   return ctx.makeImage()
@@ -265,9 +265,9 @@ struct CoverRenderer {
 
  // ── Front Cover ────────────────────────────────────
 
- private func drawFront(ctx: CGContext) {
+ private func drawFront(ctx: CGContext, spineColor: NSColor) {
   let g = geometry
-  if !data.frontCoverImage.isEmpty { drawFrontImage(ctx: ctx) }
+  if !data.frontCoverImage.isEmpty { drawFrontImage(ctx: ctx, spineColor: spineColor) }
   guard data.frontText else { return }
 
   let maxW = CGFloat(g.frontWidth - g.safe * 2)
@@ -356,7 +356,7 @@ struct CoverRenderer {
   ctx.restoreGState()
  }
 
- private func drawFrontImage(ctx: CGContext) {
+ private func drawFrontImage(ctx: CGContext, spineColor: NSColor) {
   let assetPath = resolvedAssetPath(data.frontCoverImage)
   guard let imageData = try? Data(contentsOf: URL(fileURLWithPath: assetPath)),
    let image = NSImage(data: imageData),
@@ -377,9 +377,39 @@ struct CoverRenderer {
    sourceWidth: cg.width, sourceHeight: cg.height,
    panelWidth: Int(imageRect.width), panelHeight: Int(imageRect.height)
   )
-  if fit == .stretch {
+  switch fit {
+  case .stretch:
    ctx.draw(cg, in: imageRect)
-  } else {
+  case .fit:
+   // Contain: whole image visible inside the VISIBLE front frame — the front cover
+   // region KDP actually shows (effectiveFrontLeft..+frontWidth × trimTop..trimBottom),
+   // not the full panel: the HC outer wrap and PB bleed fold away / get cropped, so
+   // framing to the panel would truncate the art in KDP's previewer. Letterbox bands
+   // use the spine color. `frontImageFitInsetInches` shrinks the frame further.
+   let inset = CGFloat(data.frontImageFitInsetInches) * CGFloat(geometry.dpi)
+   var frame = CGRect(
+    x: CGFloat(g.effectiveFrontLeft),
+    y: CGFloat(g.trimTop),
+    width: CGFloat(g.frontWidth),
+    height: CGFloat(g.frontHeight)
+   )
+   frame = frame.insetBy(dx: inset, dy: inset).intersection(imageRect)
+   ctx.setFillColor(spineColor.cgColor)
+   ctx.fill(imageRect)
+   let scale = min(frame.width / CGFloat(cg.width), frame.height / CGFloat(cg.height))
+   let sw = CGFloat(cg.width) * scale
+   let sh = CGFloat(cg.height) * scale
+   let ox: CGFloat
+   let oy: CGFloat
+   if data.frontCoverImageCentered {
+    ox = (frame.width - sw) / 2
+    oy = (frame.height - sh) / 2
+   } else {
+    ox = (frame.width - sw) / 2 + CGFloat(data.resolvedImageOffsetX()) * CGFloat(geometry.dpi)
+    oy = (frame.height - sh) / 2 + CGFloat(data.resolvedImageOffsetY()) * CGFloat(geometry.dpi)
+   }
+   ctx.draw(cg, in: CGRect(x: frame.minX + ox, y: frame.minY + oy, width: sw, height: sh))
+  default:
    let scale = max(imageRect.width / CGFloat(cg.width), imageRect.height / CGFloat(cg.height))
    let sw = CGFloat(cg.width) * scale
    let sh = CGFloat(cg.height) * scale

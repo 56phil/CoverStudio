@@ -1,5 +1,5 @@
-import SwiftUI
 import AppKit
+import SwiftUI
 import UniformTypeIdentifiers
 
 struct FrontTab: View {
@@ -12,20 +12,23 @@ struct FrontTab: View {
             Section("Title & Author Scale") {
                 VStack(spacing: 2) {
                     HStack {
-                        Slider(value: Binding(
-                            get: { data.resolvedTitleScale() },
-                            set: { newValue in
-                                setActiveTitleScale(newValue)
-                                setActiveAuthorScale(newValue)
-                            }
-                        ), in: 0.25...2.0, step: 0.05)
+                        Slider(
+                            value: Binding(
+                                get: { data.resolvedTitleScale() },
+                                set: { newValue in
+                                    setActiveTitleScale(newValue)
+                                    setActiveAuthorScale(newValue)
+                                }
+                            ), in: 0.25...2.0, step: 0.05)
                         Text(String(format: "%.2f×", data.resolvedTitleScale()))
                             .font(.caption.monospacedDigit())
                             .frame(width: 46)
                     }
-                    Text("Sets title and author scale together. Use the individual controls below to adjust separately.")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                    Text(
+                        "Sets title and author scale together. Use the individual controls below to adjust separately."
+                    )
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
                 }
             }
             Section("Background Image") {
@@ -39,11 +42,18 @@ struct FrontTab: View {
                     ZStack {
                         RoundedRectangle(cornerRadius: 8)
                             .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-                            .foregroundColor(isDropTargeted ? .accentColor : .secondary.opacity(0.4))
-                            .background(RoundedRectangle(cornerRadius: 8)
-                                .fill(isDropTargeted ? Color.accentColor.opacity(0.08) : Color.clear))
+                            .foregroundColor(
+                                isDropTargeted ? .accentColor : .secondary.opacity(0.4)
+                            )
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(
+                                        isDropTargeted
+                                            ? Color.accentColor.opacity(0.08) : Color.clear))
                         if let ns = resolvedThumbnail() {
-                            Image(nsImage: ns).resizable().aspectRatio(contentMode: .fit).frame(height: 80).cornerRadius(6)
+                            Image(nsImage: ns).resizable().aspectRatio(contentMode: .fit).frame(
+                                height: 80
+                            ).cornerRadius(6)
                         } else if data.frontCoverImage.isEmpty {
                             VStack(spacing: 6) {
                                 Image(systemName: "photo.on.rectangle").font(.system(size: 24))
@@ -52,22 +62,41 @@ struct FrontTab: View {
                             }
                         } else {
                             VStack(spacing: 6) {
-                                Image(systemName: "exclamationmark.triangle").font(.system(size: 24))
-                                    .foregroundColor(.orange.opacity(0.8))
+                                Image(systemName: "exclamationmark.triangle").font(
+                                    .system(size: 24)
+                                )
+                                .foregroundColor(.orange.opacity(0.8))
                                 Text("Image not found").font(.caption).foregroundColor(.secondary)
                             }
                         }
                     }
                     .frame(height: 90)
-                    .onDrop(of: [.fileURL], isTargeted: $isDropTargeted) { handleDrop(providers: $0) }
+                    .onDrop(of: [.fileURL], isTargeted: $isDropTargeted) {
+                        handleDrop(providers: $0)
+                    }
                 }
                 Toggle("Center image", isOn: $data.frontCoverImageCentered)
                 Picker("Fit", selection: $data.frontImageFit) {
                     ForEach(FrontImageFit.allCases, id: \.self) { Text($0.label).tag($0) }
                 }
-                Text("Auto: cover (scale + crop) when the art aspect is close to the panel, stretch otherwise. A fitted copy is written next to your image when needed.")
+                if data.frontImageFit == .fit {
+                    TextField(
+                        "Fit inset",
+                        value: $data.frontImageFitInsetInches,
+                        format: .number
+                    )
+                    Text(
+                        "Fit frames the art to the visible front cover area (what KDP shows). Inset shrinks that frame on all sides; negative values let the art bleed past it."
+                    )
                     .font(.caption2)
                     .foregroundColor(.secondary)
+                } else {
+                    Text(
+                        "Auto: cover (scale + crop) when the art aspect is close to the panel, stretch otherwise. Cover/Stretch: a fitted copy is written next to your image when needed."
+                    )
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                }
                 OffsetRow("Offset", ox: activeImageOffsetX, oy: activeImageOffsetY)
                 fittedCopyStatus
             }
@@ -84,7 +113,9 @@ struct FrontTab: View {
             }
 
             Section("Subtitle") {
-                TextField(text: $data.subtitle, prompt: Text("Subtitle (optional)")) { Text("Subtitle") }
+                TextField(text: $data.subtitle, prompt: Text("Subtitle (optional)")) {
+                    Text("Subtitle")
+                }
                 CenterAxisRow(centerX: activeSubtitleCenterX, centerY: activeSubtitleCenterY)
                 HStack {
                     Text("Size").frame(width: 50, alignment: .leading)
@@ -111,8 +142,11 @@ struct FrontTab: View {
         Binding(
             get: { data.resolvedImageOffsetX() },
             set: {
-                if data.bindingType == .hc { data.hcFrontImageOffsetXInches = $0 }
-                else { data.frontCoverImageOffsetXInches = $0 }
+                if data.bindingType == .hc {
+                    data.hcFrontImageOffsetXInches = $0
+                } else {
+                    data.frontCoverImageOffsetXInches = $0
+                }
             }
         )
     }
@@ -121,8 +155,11 @@ struct FrontTab: View {
         Binding(
             get: { data.resolvedImageOffsetY() },
             set: {
-                if data.bindingType == .hc { data.hcFrontImageOffsetYInches = $0 }
-                else { data.frontCoverImageOffsetYInches = $0 }
+                if data.bindingType == .hc {
+                    data.hcFrontImageOffsetYInches = $0
+                } else {
+                    data.frontCoverImageOffsetYInches = $0
+                }
             }
         )
     }
@@ -131,8 +168,11 @@ struct FrontTab: View {
         Binding(
             get: { data.resolvedOffsetX() },
             set: {
-                if data.bindingType == .hc { data.hcFrontTitleOffsetXInches = $0 }
-                else { data.frontTitleOffsetXInches = $0 }
+                if data.bindingType == .hc {
+                    data.hcFrontTitleOffsetXInches = $0
+                } else {
+                    data.frontTitleOffsetXInches = $0
+                }
             }
         )
     }
@@ -141,8 +181,11 @@ struct FrontTab: View {
         Binding(
             get: { data.resolvedOffsetY() },
             set: {
-                if data.bindingType == .hc { data.hcFrontTitleOffsetYInches = $0 }
-                else { data.frontTitleOffsetYInches = $0 }
+                if data.bindingType == .hc {
+                    data.hcFrontTitleOffsetYInches = $0
+                } else {
+                    data.frontTitleOffsetYInches = $0
+                }
             }
         )
     }
@@ -151,8 +194,11 @@ struct FrontTab: View {
         Binding(
             get: { data.resolvedTitleCenterX() },
             set: {
-                if data.bindingType == .hc { data.hcFrontTitleCenterX = $0 }
-                else { data.frontTitleCenterX = $0 }
+                if data.bindingType == .hc {
+                    data.hcFrontTitleCenterX = $0
+                } else {
+                    data.frontTitleCenterX = $0
+                }
             }
         )
     }
@@ -161,8 +207,11 @@ struct FrontTab: View {
         Binding(
             get: { data.resolvedTitleCenterY() },
             set: {
-                if data.bindingType == .hc { data.hcFrontTitleCenterY = $0 }
-                else { data.frontTitleCenterY = $0 }
+                if data.bindingType == .hc {
+                    data.hcFrontTitleCenterY = $0
+                } else {
+                    data.frontTitleCenterY = $0
+                }
             }
         )
     }
@@ -171,8 +220,11 @@ struct FrontTab: View {
         Binding(
             get: { data.resolvedSubtitleOffsetX() },
             set: {
-                if data.bindingType == .hc { data.hcFrontSubtitleOffsetXInches = $0 }
-                else { data.frontSubtitleOffsetXInches = $0 }
+                if data.bindingType == .hc {
+                    data.hcFrontSubtitleOffsetXInches = $0
+                } else {
+                    data.frontSubtitleOffsetXInches = $0
+                }
             }
         )
     }
@@ -181,8 +233,11 @@ struct FrontTab: View {
         Binding(
             get: { data.resolvedSubtitleOffsetY() },
             set: {
-                if data.bindingType == .hc { data.hcFrontSubtitleOffsetYInches = $0 }
-                else { data.frontSubtitleOffsetYInches = $0 }
+                if data.bindingType == .hc {
+                    data.hcFrontSubtitleOffsetYInches = $0
+                } else {
+                    data.frontSubtitleOffsetYInches = $0
+                }
             }
         )
     }
@@ -191,8 +246,11 @@ struct FrontTab: View {
         Binding(
             get: { data.resolvedSubtitleCenterX() },
             set: {
-                if data.bindingType == .hc { data.hcFrontSubtitleCenterX = $0 }
-                else { data.frontSubtitleCenterX = $0 }
+                if data.bindingType == .hc {
+                    data.hcFrontSubtitleCenterX = $0
+                } else {
+                    data.frontSubtitleCenterX = $0
+                }
             }
         )
     }
@@ -201,8 +259,11 @@ struct FrontTab: View {
         Binding(
             get: { data.resolvedSubtitleCenterY() },
             set: {
-                if data.bindingType == .hc { data.hcFrontSubtitleCenterY = $0 }
-                else { data.frontSubtitleCenterY = $0 }
+                if data.bindingType == .hc {
+                    data.hcFrontSubtitleCenterY = $0
+                } else {
+                    data.frontSubtitleCenterY = $0
+                }
             }
         )
     }
@@ -212,8 +273,11 @@ struct FrontTab: View {
             get: { data.resolvedSubtitleScale() },
             set: {
                 let value = max($0, 0.1)
-                if data.bindingType == .hc { data.hcFrontSubtitleScale = value }
-                else { data.frontSubtitleScale = value }
+                if data.bindingType == .hc {
+                    data.hcFrontSubtitleScale = value
+                } else {
+                    data.frontSubtitleScale = value
+                }
             }
         )
     }
@@ -222,8 +286,11 @@ struct FrontTab: View {
         Binding(
             get: { data.resolvedAuthorCenterX() },
             set: {
-                if data.bindingType == .hc { data.hcFrontAuthorCenterX = $0 }
-                else { data.frontAuthorCenterX = $0 }
+                if data.bindingType == .hc {
+                    data.hcFrontAuthorCenterX = $0
+                } else {
+                    data.frontAuthorCenterX = $0
+                }
             }
         )
     }
@@ -232,8 +299,11 @@ struct FrontTab: View {
         Binding(
             get: { data.resolvedAuthorCenterY() },
             set: {
-                if data.bindingType == .hc { data.hcFrontAuthorCenterY = $0 }
-                else { data.frontAuthorCenterY = $0 }
+                if data.bindingType == .hc {
+                    data.hcFrontAuthorCenterY = $0
+                } else {
+                    data.frontAuthorCenterY = $0
+                }
             }
         )
     }
@@ -242,8 +312,11 @@ struct FrontTab: View {
         Binding(
             get: { data.resolvedAuthorOffsetX() },
             set: {
-                if data.bindingType == .hc { data.hcFrontAuthorOffsetXInches = $0 }
-                else { data.frontAuthorOffsetXInches = $0 }
+                if data.bindingType == .hc {
+                    data.hcFrontAuthorOffsetXInches = $0
+                } else {
+                    data.frontAuthorOffsetXInches = $0
+                }
             }
         )
     }
@@ -252,8 +325,11 @@ struct FrontTab: View {
         Binding(
             get: { data.resolvedAuthorOffsetY() },
             set: {
-                if data.bindingType == .hc { data.hcFrontAuthorOffsetYInches = $0 }
-                else { data.frontAuthorOffsetYInches = $0 }
+                if data.bindingType == .hc {
+                    data.hcFrontAuthorOffsetYInches = $0
+                } else {
+                    data.frontAuthorOffsetYInches = $0
+                }
             }
         )
     }
@@ -273,19 +349,27 @@ struct FrontTab: View {
     }
 
     private func setActiveTitleScale(_ value: Double) {
-        if data.bindingType == .hc { data.hcFrontTitleScale = value }
-        else { data.frontTitleScale = value }
+        if data.bindingType == .hc {
+            data.hcFrontTitleScale = value
+        } else {
+            data.frontTitleScale = value
+        }
     }
 
     private func setActiveAuthorScale(_ value: Double) {
-        if data.bindingType == .hc { data.hcFrontAuthorScale = value }
-        else { data.frontAuthorScale = value }
+        if data.bindingType == .hc {
+            data.hcFrontAuthorScale = value
+        } else {
+            data.frontAuthorScale = value
+        }
     }
 
     /// Status row: shows when a fitted copy exists for the current image.
     private var fittedCopyStatus: some View {
         Group {
-            if let path = FrontImageFitter.relativeFittedPath(for: data.frontCoverImage, relativeTo: sourceURL) {
+            if let path = FrontImageFitter.relativeFittedPath(
+                for: data.frontCoverImage, relativeTo: sourceURL)
+            {
                 Label(path, systemImage: "checkmark.seal")
                     .font(.caption2)
                     .foregroundColor(.secondary)
@@ -305,7 +389,9 @@ struct FrontTab: View {
     private func chooseImage() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.png, .jpeg, .tiff, .bmp, .heic]
-        panel.canChooseFiles = true; panel.canChooseDirectories = false; panel.allowsMultipleSelection = false
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
         if panel.runModal() == .OK, let url = panel.url {
             data.frontCoverImage = ProjectManager.makeRelativePath(url, relativeTo: sourceURL)
         }
@@ -315,10 +401,11 @@ struct FrontTab: View {
         guard let p = providers.first else { return false }
         p.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { item, _ in
             if let d = item as? Data, let url = URL(dataRepresentation: d, relativeTo: nil) {
-                let exts = ["png","jpg","jpeg","tiff","tif","bmp","heic","heif"]
+                let exts = ["png", "jpg", "jpeg", "tiff", "tif", "bmp", "heic", "heif"]
                 if exts.contains(url.pathExtension.lowercased()) {
                     DispatchQueue.main.async {
-                        self.data.frontCoverImage = ProjectManager.makeRelativePath(url, relativeTo: self.sourceURL)
+                        self.data.frontCoverImage = ProjectManager.makeRelativePath(
+                            url, relativeTo: self.sourceURL)
                     }
                 }
             }
@@ -367,7 +454,9 @@ struct OffsetRow: View {
     @Binding var oy: Double
 
     init(_ label: String, ox: Binding<Double>, oy: Binding<Double>) {
-        self.label = label; self._ox = ox; self._oy = oy
+        self.label = label
+        self._ox = ox
+        self._oy = oy
     }
 
     var body: some View {

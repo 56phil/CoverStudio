@@ -38,6 +38,9 @@ struct CoverData: Codable, Equatable {
     var frontCoverImage: String = ""
     var frontCoverImageCentered: Bool = false
     var frontImageFit: FrontImageFit = .auto
+    /// Extra inset (inches) around the visible front frame when `frontImageFit == .fit`.
+    /// 0 = fill the visible frame edge-to-edge; positive values shrink it further.
+    var frontImageFitInsetInches: Double = 0.0
     var frontCoverImageOffsetXInches: Double = 0.0
     var frontCoverImageOffsetYInches: Double = 0.0
 
@@ -305,7 +308,7 @@ struct CoverData: Codable, Equatable {
 
         case uiUnits = "ui_units"
         case guideXOffsetInches = "guide_x_offset_inches"
-
+        case frontImageFitInsetInches = "front_image_fit_inset_inches"
         case frontCoverImage = "front_cover_image"
         case frontCoverImageCentered = "front_cover_image_centered"
         case frontImageFit = "front_image_fit"
@@ -492,11 +495,11 @@ struct CoverData: Codable, Equatable {
 
         uiUnits = try container.decodeIfPresent(Units.self, forKey: .uiUnits) ?? .inches
         guideXOffsetInches = container.doubleOrZero(.guideXOffsetInches)
-
         frontCoverImage = container.stringOrEmpty(.frontCoverImage)
-        frontCoverImageCentered = container.boolOrFalse(.frontCoverImageCentered)
         frontImageFit =
             try container.decodeIfPresent(FrontImageFit.self, forKey: .frontImageFit) ?? .auto
+        frontImageFitInsetInches = container.doubleOrZero(.frontImageFitInsetInches)
+        frontCoverImageCentered = container.boolOrFalse(.frontCoverImageCentered)
         frontCoverImageOffsetXInches = container.bindingDouble(
             canonical: .frontCoverImageOffsetXInches,
             paperback: .pbFrontImageOffsetXInches,
@@ -802,6 +805,8 @@ struct CoverData: Codable, Equatable {
         try container.encode(guideXOffsetInches, forKey: .guideXOffsetInches)
         try container.encode(frontCoverImage, forKey: .frontCoverImage)
         try container.encode(frontCoverImageCentered, forKey: .frontCoverImageCentered)
+        try container.encode(frontImageFit, forKey: .frontImageFit)
+        try container.encode(frontImageFitInsetInches, forKey: .frontImageFitInsetInches)
         try container.encode(frontCoverImageOffsetXInches, forKey: .frontCoverImageOffsetXInches)
         try container.encode(frontCoverImageOffsetYInches, forKey: .frontCoverImageOffsetYInches)
         try container.encode(frontCoverImageOffsetXInches, forKey: .pbFrontImageOffsetXInches)

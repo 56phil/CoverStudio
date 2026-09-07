@@ -46,6 +46,11 @@ final class FrontImageFitterTests: XCTestCase {
                 sourceWidth: 600, sourceHeight: 900, panelWidth: 1800, panelHeight: 2700),
             .stretch
         )
+        XCTAssertEqual(
+            FrontImageFit.fit.resolved(
+                sourceWidth: 1200, sourceHeight: 800, panelWidth: 1800, panelHeight: 2700),
+            .fit
+        )
     }
 
     // ── Fitted copy materialization ──────────────────────────────────
@@ -89,6 +94,30 @@ final class FrontImageFitterTests: XCTestCase {
                 forProposedRect: nil, context: nil, hints: nil))
         XCTAssertEqual(fitted.width, 1800)
         XCTAssertEqual(fitted.height, 2700)
+    }
+
+    func testFitterContainsWholeSourceInFitMode() throws {
+        let source = try makeSourceImage(width: 1200, height: 800)
+
+        let fittedPath = FrontImageFitter.updateFittedImage(
+            sourcePath: source.path, fit: .fit,
+            panelWidth: 1800, panelHeight: 2700,
+            relativeTo: nil
+        )
+
+        let fitted = try XCTUnwrap(
+            NSImage(contentsOfFile: fittedPath!)?.cgImage(
+                forProposedRect: nil, context: nil, hints: nil))
+        XCTAssertEqual(fitted.width, 1800)
+        XCTAssertEqual(fitted.height, 2700)
+
+        // Contained image: scale = min(1800/1200, 2700/800) = 1.5 → 1800×1200 centered
+        // vertically. Top and bottom bands are black letterbox; the middle band
+        // contains source-red pixels.
+        let topBand = try pixels(in: CGRect(x: 0, y: 2400, width: 1800, height: 300), from: fitted)
+        XCTAssertTrue(topBand.allSatisfy { $0.red < 40 && $0.green < 40 && $0.blue < 40 })
+        let midBand = try pixels(in: CGRect(x: 0, y: 1200, width: 1800, height: 300), from: fitted)
+        XCTAssertTrue(midBand.contains { $0.red > 200 && $0.green < 80 && $0.blue < 80 })
     }
 
     func testFitterRegeneratesWhenSourceChanges() throws {
@@ -160,7 +189,9 @@ final class FrontImageFitterTests: XCTestCase {
             panelWidth: geometry.frontImageWidth, panelHeight: geometry.totalHeight, relativeTo: nil
         )
         let fittedURL = FrontImageFitter.fittedPath(for: source)
-        var fitted = try XCTUnwrap(NSImage(contentsOfFile: fittedURL.path)?.cgImage(forProposedRect: nil, context: nil, hints: nil))
+        var fitted = try XCTUnwrap(
+            NSImage(contentsOfFile: fittedURL.path)?.cgImage(
+                forProposedRect: nil, context: nil, hints: nil))
         XCTAssertEqual(fitted.width, geometry.frontImageWidth)
         XCTAssertEqual(fitted.height, geometry.totalHeight)
 
@@ -171,12 +202,15 @@ final class FrontImageFitterTests: XCTestCase {
             sourcePath: source.path, fit: .auto,
             panelWidth: geometry.frontImageWidth, panelHeight: geometry.totalHeight, relativeTo: nil
         )
-        fitted = try XCTUnwrap(NSImage(contentsOfFile: fittedURL.path)?.cgImage(forProposedRect: nil, context: nil, hints: nil))
+        fitted = try XCTUnwrap(
+            NSImage(contentsOfFile: fittedURL.path)?.cgImage(
+                forProposedRect: nil, context: nil, hints: nil))
         XCTAssertEqual(fitted.width, geometry.frontImageWidth)
         XCTAssertEqual(fitted.height, geometry.totalHeight)
 
         // All four corners are filled with art (red), not letterboxed black.
-        let px = try pixels(in: CGRect(x: 0, y: 0, width: fitted.width, height: fitted.height), from: fitted)
+        let px = try pixels(
+            in: CGRect(x: 0, y: 0, width: fitted.width, height: fitted.height), from: fitted)
         XCTAssertTrue(px.contains { $0.red > 200 && $0.green < 80 && $0.blue < 80 })
     }
 
