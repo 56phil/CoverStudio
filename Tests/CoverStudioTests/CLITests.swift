@@ -229,10 +229,148 @@ final class CLITests: XCTestCase {
         XCTAssertEqual(CLI.main(arguments: ["validate", project.path]), CLIExit.invalidCover)
     }
 
+    // MARK: - Back-cover font sizes
+
+    func testUnsetFontSizesAreTheDefaults() {
+        // 0 means "unset". The defaults must be the sizes the renderer used
+        // before the size was configurable, so an older cover.md is unaffected.
+        let data = CoverData()
+        XCTAssertEqual(data.resolvedBlurbFontSizePoints(),
+                       CoverLayoutDefaults.backBlurbFontSizePoints)
+        XCTAssertEqual(data.resolvedQuoteFontSizePoints(),
+                       CoverLayoutDefaults.backQuoteFontSizePoints)
+        XCTAssertEqual(data.resolvedAuthorBioFontSizePoints(),
+                       CoverLayoutDefaults.backAuthorBioFontSizePoints)
+    }
+
+    func testDefaultsRemainTheHistoricalRenderedSizes() {
+        // The literals are the contract, not the constants. The renderer
+        // hardcoded 43/38/32 before the size was configurable, so these defaults
+        // are what makes an unset cover.md render byte-identically to before.
+        // Comparing a constant to itself would pass whatever the value became;
+        // this fails the moment someone changes it and silently moves every
+        // existing cover.
+        XCTAssertEqual(CoverLayoutDefaults.backBlurbFontSizePoints, 43)
+        XCTAssertEqual(CoverLayoutDefaults.backQuoteFontSizePoints, 38)
+        XCTAssertEqual(CoverLayoutDefaults.backAuthorBioFontSizePoints, 32)
+    }
+
+    func testFontSizeIsResolvedPerBinding() {
+        var data = CoverData()
+        data.bindingType = .pb
+        data.blurbFontSizePoints = 40
+        data.hcBlurbFontSizePoints = 60
+        XCTAssertEqual(data.resolvedBlurbFontSizePoints(), 40)
+
+        data.bindingType = .hc
+        XCTAssertEqual(data.resolvedBlurbFontSizePoints(), 60)
+
+        // An unset hardcover size falls back to the default rather than to the
+        // paperback's value: the two bindings are independent.
+        data.hcBlurbFontSizePoints = 0
+        XCTAssertEqual(data.resolvedBlurbFontSizePoints(),
+                       CoverLayoutDefaults.backBlurbFontSizePoints)
+    }
+
+    func testFontSizesSurviveARoundTripThroughMarkdown() throws {
+        let project = try makeProject()
+        let coverFile = try ProjectManager.resolveCoverFile(in: project)
+
+        var data = try ProjectManager.load(from: coverFile)
+        data.blurbFontSizePoints = 51
+        data.hcQuoteFontSizePoints = 33
+        data.authorBioFontSizePoints = 27
+        try ProjectManager.save(data, to: coverFile)
+
+        let reloaded = try ProjectManager.load(from: coverFile)
+        XCTAssertEqual(reloaded.blurbFontSizePoints, 51)
+        XCTAssertEqual(reloaded.hcQuoteFontSizePoints, 33)
+        XCTAssertEqual(reloaded.authorBioFontSizePoints, 27)
+    }
+
+    func testChangingTheBlurbSizeChangesTheRenderedCover() throws {
+        let project = try makeProject(blurb: longBlurb)
+        let coverFile = try ProjectManager.resolveCoverFile(in: project)
+
+        let before = temporaryDirectory!.appendingPathComponent("before.png")
+        XCTAssertEqual(
+            CLI.main(arguments: ["render", project.path, "--out-png", before.path]), CLIExit.ok)
+
+        var data = try ProjectManager.load(from: coverFile)
+        data.blurbFontSizePoints = 70
+        try ProjectManager.save(data, to: coverFile)
+
+        let after = temporaryDirectory!.appendingPathComponent("after.png")
+        XCTAssertEqual(
+            CLI.main(arguments: ["render", project.path, "--out-png", after.path]), CLIExit.ok)
+
+        XCTAssertNotEqual(
+            try Data(contentsOf: before), try Data(contentsOf: after),
+            "Raising the blurb font size must change the rendered cover")
+    }
+
+    func testOversizedBlurbIsReportedAsClipped() throws {
+        // The back-cover blocks stop at a computed height and draw silently, so
+        // too-long copy is cut rather than reported. With the size now a control,
+        // turning it up must not truncate the copy invisibly.
+        let project = try makeProject(blurb: longBlurb)
+        let coverFile = try ProjectManager.resolveCoverFile(in: project)
+
+        var data = try ProjectManager.load(from: coverFile)
+        data.blurbFontSizePoints = 120
+        try ProjectManager.save(data, to: coverFile)
+
+        let geometry = try computeGeometry(from: try ProjectManager.load(from: coverFile))
+        let renderer = CoverRenderer(
+            data: try ProjectManager.load(from: coverFile), geometry: geometry, sourceURL: coverFile)
+        _ = renderer.renderFullCover(includeGuides: false)
+
+        XCTAssertTrue(renderer.diagnostics.hasClipping, "An oversized blurb must be reported")
+        XCTAssertEqual(renderer.diagnostics.clippedText.first?.block, "blurb")
+        XCTAssertGreaterThan(renderer.diagnostics.clippedText.first?.overflowPx ?? 0, 0)
+    }
+
+    func testDefaultSizedBlurbIsNotReportedAsClipped() throws {
+        // The counterpart guard: the check must not fire on copy that fits, or
+        // the warning becomes noise the author learns to ignore.
+        let project = try makeProject(blurb: longBlurb)
+        let coverFile = try ProjectManager.resolveCoverFile(in: project)
+        let data = try ProjectManager.load(from: coverFile)
+        let geometry = try computeGeometry(from: data)
+
+        let renderer = CoverRenderer(data: data, geometry: geometry, sourceURL: coverFile)
+        _ = renderer.renderFullCover(includeGuides: false)
+
+        XCTAssertFalse(renderer.diagnostics.hasClipping)
+        XCTAssertTrue(renderer.diagnostics.clippedText.isEmpty)
+    }
+
+    func testNegativeFontSizeIsAValidationError() {
+        var data = CoverData()
+        data.blurbFontSizePoints = -10
+        let errors = Validation.validate(data).filter { $0.severity == .error }
+        XCTAssertTrue(
+            errors.contains { $0.field == "blurb_font_size_points" },
+            "A negative font size must be a validation error")
+    }
+
     // MARK: - Fixtures
 
+    /// Longer than the default-size blurb area holds at a large font size, but
+    /// comfortably inside it at the default size.
+    private let longBlurb = """
+        This is a deliberately long back-cover description used to exercise the \
+        font-size controls. It runs to several sentences so that increasing the \
+        size pushes the text past the height the back panel reserves for it, \
+        which is the condition the clipping check exists to catch. At the default \
+        size this copy fits, and the cover renders without any warning at all.
+        """
+
     /// Build a minimal but valid project: a cover.md plus its front image.
-    private func makeProject(frontCoverImage: String = "cover/assets/base.png") throws -> URL {
+    private func makeProject(
+        frontCoverImage: String = "cover/assets/base.png",
+        blurb: String = "A short blurb for the fixture."
+    ) throws -> URL {
         let root = temporaryDirectory!.appendingPathComponent("book-\(UUID().uuidString)", isDirectory: true)
         let coverDirectory = root.appendingPathComponent("cover", isDirectory: true)
         let assets = coverDirectory.appendingPathComponent("assets", isDirectory: true)
@@ -253,7 +391,7 @@ final class CLITests: XCTestCase {
             front_cover_image: \(frontCoverImage)
             title: Test Title
             author_name: Test Author
-            blurb: A short blurb for the fixture.
+            blurb: \(blurb)
             ---
 
             """

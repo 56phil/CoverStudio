@@ -14,11 +14,17 @@ struct BackTab: View {
      .buttonStyle(.borderedProminent)
     OffsetRow("Offset", ox: $data.blurbOffsetXInches, oy: $data.blurbOffsetYInches)
     WidthRow(label: "Line width", width: $data.blurbWidthInches)
+    FontSizeRow(
+     label: "Font size", points: activeBlurbFontSize,
+     defaultPoints: CoverLayoutDefaults.backBlurbFontSizePoints, range: 14...90)
    }
 
    Section("Quote") {
     TextEditor(text: $data.quote).frame(minHeight: 50, maxHeight: 100).font(.body)
     OffsetRow("Offset", ox: $data.quoteOffsetXInches, oy: $data.quoteOffsetYInches)
+    FontSizeRow(
+     label: "Font size", points: activeQuoteFontSize,
+     defaultPoints: CoverLayoutDefaults.backQuoteFontSizePoints, range: 12...72)
     TextField("Attribution", text: $data.quoteAttribution)
     OffsetRow(
      "Attr offset", ox: $data.quoteAttributionOffsetXInches, oy: $data.quoteAttributionOffsetYInches
@@ -35,6 +41,9 @@ struct BackTab: View {
      Text("Para gap").frame(width: 60, alignment: .leading)
      TextField("pt", value: $data.authorBioParagraphGapPoints, format: .number).frame(width: 80)
     }
+    FontSizeRow(
+     label: "Font size", points: activeBioFontSize,
+     defaultPoints: CoverLayoutDefaults.backAuthorBioFontSizePoints, range: 14...56)
    }
 
    Section("Author Photo") {
@@ -76,6 +85,38 @@ struct BackTab: View {
   Binding(
    get: { data.bindingType == .hc ? data.hcAuthorBio : data.authorBio },
    set: { if data.bindingType == .hc { data.hcAuthorBio = $0 } else { data.authorBio = $0 } }
+  )
+ }
+
+ /// Routes to the per-binding blurb font size, so the two bindings can differ.
+ private var activeBlurbFontSize: Binding<Double> {
+  Binding(
+   get: { data.bindingType == .hc ? data.hcBlurbFontSizePoints : data.blurbFontSizePoints },
+   set: {
+    if data.bindingType == .hc { data.hcBlurbFontSizePoints = $0 } else { data.blurbFontSizePoints = $0 }
+   }
+  )
+ }
+
+ private var activeQuoteFontSize: Binding<Double> {
+  Binding(
+   get: { data.bindingType == .hc ? data.hcQuoteFontSizePoints : data.quoteFontSizePoints },
+   set: {
+    if data.bindingType == .hc { data.hcQuoteFontSizePoints = $0 } else { data.quoteFontSizePoints = $0 }
+   }
+  )
+ }
+
+ private var activeBioFontSize: Binding<Double> {
+  Binding(
+   get: { data.bindingType == .hc ? data.hcAuthorBioFontSizePoints : data.authorBioFontSizePoints },
+   set: {
+    if data.bindingType == .hc {
+     data.hcAuthorBioFontSizePoints = $0
+    } else {
+     data.authorBioFontSizePoints = $0
+    }
+   }
   )
  }
 
@@ -145,6 +186,55 @@ struct CropPositionRow: View {
    }
   }
   .padding(.top, 2)
+ }
+}
+
+struct FontSizeRow: View {
+ let label: String
+ @Binding var points: Double
+ /// The size used when `points` is 0 (unset), shown so the control is never blank.
+ let defaultPoints: Double
+ let range: ClosedRange<Double>
+
+ /// 0 means "use the default", so one control serves both the default and an
+ /// explicit size without a separate toggle.
+ private var isDefault: Binding<Bool> {
+  Binding(
+   get: { points <= 0 },
+   set: { useDefault in
+    points = useDefault ? 0 : defaultPoints
+   }
+  )
+ }
+
+ private var sliderBinding: Binding<Double> {
+  Binding(
+   get: { points > 0 ? min(max(points, range.lowerBound), range.upperBound) : defaultPoints },
+   set: { points = $0 }
+  )
+ }
+
+ var body: some View {
+  VStack(alignment: .leading, spacing: 6) {
+   HStack {
+    Text(label).frame(width: 70, alignment: .leading)
+    Toggle("Default", isOn: isDefault)
+     .toggleStyle(.checkbox)
+    Spacer()
+    Text(points <= 0 ? "Default (\(Int(defaultPoints)) pt)" : "\(Int(points)) pt")
+     .font(.caption.monospacedDigit())
+     .foregroundColor(.secondary)
+     .frame(width: 110, alignment: .trailing)
+   }
+
+   HStack {
+    Slider(value: sliderBinding, in: range, step: 1)
+     .disabled(points <= 0)
+    TextField("pt", value: $points, format: .number.precision(.fractionLength(0)))
+     .frame(width: 70)
+    Text("pt").foregroundColor(.secondary)
+   }
+  }
  }
 }
 

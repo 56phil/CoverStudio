@@ -158,6 +158,29 @@ struct Validation {
                 Issue(severity: .warning, field: "blurb", message: "Back-cover blurb is empty."))
         }
 
+        // Font sizes. A negative size would be encoded but means nothing, and an
+        // absurd one is worth flagging before it clips the copy.
+        for (field, size) in [
+            ("blurb_font_size_points", data.blurbFontSizePoints),
+            ("hc_blurb_font_size_points", data.hcBlurbFontSizePoints),
+            ("quote_font_size_points", data.quoteFontSizePoints),
+            ("hc_quote_font_size_points", data.hcQuoteFontSizePoints),
+            ("author_bio_font_size_points", data.authorBioFontSizePoints),
+            ("hc_author_bio_font_size_points", data.hcAuthorBioFontSizePoints),
+        ] {
+            if size < 0 {
+                issues.append(
+                    Issue(
+                        severity: .error, field: field,
+                        message: "Font size cannot be negative. Use 0 for the default."))
+            } else if size > 0 && size < 6 {
+                issues.append(
+                    Issue(
+                        severity: .warning, field: field,
+                        message: "Font size \(Int(size))pt is too small to read in print."))
+            }
+        }
+
         return issues
     }
 

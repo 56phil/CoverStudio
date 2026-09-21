@@ -21,6 +21,7 @@ CoverStudio is early software. It can already:
 - Preserve precomposed front art with `front_text: false`.
 - Tune spine text, spine color, and color extension.
 - Place back-cover blurb, quote, author bio, and author photo.
+- Set the back-cover blurb, quote, and bio font sizes, per binding (paperback and hardcover independently).
 - Export the full wraparound cover as PDF; a PNG copy is written alongside it automatically.
 - Export a front-cover crop as JPEG.
 - Run headless: `render`, `validate`, and `inspect` subcommands for scripts and CI.
@@ -126,6 +127,52 @@ Running the binary from inside an unsigned `CoverStudio.app` prints one
 `sandbox_extension_issue_file_to_process` line to stderr during `render`. It is
 cosmetic: exit status and stdout are unaffected, and the plain binary
 (`.build/release/CoverStudio`) is silent.
+
+## Back-Cover Font Sizes
+
+The blurb, quote, and author-bio sizes are adjustable, separately for paperback
+and hardcover. The controls are in the Back tab, under each block.
+
+Each size is stored as `0` when unset, which means "use the default":
+
+| Field | Default |
+| --- | --- |
+| `blurb_font_size_points` / `hc_blurb_font_size_points` | 43 |
+| `quote_font_size_points` / `hc_quote_font_size_points` | 38 |
+| `author_bio_font_size_points` / `hc_author_bio_font_size_points` | 32 |
+
+Sizes are in points at the render DPI (300), so 1pt here is 1px on the cover.
+The defaults are the sizes the renderer previously hardcoded, so a `cover.md`
+that predates these fields renders exactly as it did — the addition is a no-op
+until you set something.
+
+The paperback and hardcover fields are independent. Setting the paperback blurb
+to 40pt leaves the hardcover at its default until you set that one too.
+
+### Truncation is reported
+
+The back-cover text blocks stop at a computed height and draw silently, so copy
+that is too long is **cut, not reported** — a paragraph simply does not appear.
+That was survivable with fixed sizes. Now that the size is a control, the
+renderer reports what it had to clip:
+
+```sh
+$ CoverStudio render ./my-book --out-png out.png
+out.png
+warning: blurb is clipped — needs 8338px, 2057px available (over by 6281px).
+Reduce its font size or shorten it.
+```
+
+`--json` carries the same under a `clipped` array, so a script can gate on it:
+
+```sh
+CoverStudio render ./my-book --out-png out.png --json | jq -e '.clipped | length == 0'
+```
+
+The check never fires on copy that fits, so the warning stays meaningful. Note
+it detects a block whose *height* overflows; it cannot detect a blurb pushed
+under the author photo by an offset, which is a positioning problem rather than
+a size one.
 
 ## Build And Run
 

@@ -8,6 +8,54 @@ struct CoverRenderer {
  let geometry: CoverGeometry
  let sourceURL: URL?
 
+ /// Reports back-cover text that did not fit its allotted height.
+ ///
+ /// The back-cover text blocks stop at a computed `max_y` and draw silently, so
+ /// copy that is too long is cut rather than reported — a paragraph simply does
+ /// not appear. That was survivable while the sizes were fixed constants. Once
+ /// the size is a control the author can turn up, silent truncation becomes an
+ /// easy mistake to make and an invisible one to spot, so the renderer records
+ /// what it had to clip instead.
+ ///
+ /// A reference type because the drawing methods are not `mutating`: the
+ /// renderer is used as a constant, and the report has to survive `let`.
+ ///
+ /// `@unchecked Sendable` with a lock rather than a plain class, because a
+ /// render runs on a background queue while the result is read afterwards on the
+ /// main thread. The lock makes that sharing defined instead of incidental.
+ final class Diagnostics: @unchecked Sendable {
+  struct ClippedText {
+   let block: String
+   let renderedHeightPx: CGFloat
+   let availableHeightPx: CGFloat
+   var overflowPx: CGFloat { renderedHeightPx - availableHeightPx }
+  }
+
+  private let lock = NSLock()
+  private var _clippedText: [ClippedText] = []
+
+  var clippedText: [ClippedText] {
+   lock.lock()
+   defer { lock.unlock() }
+   return _clippedText
+  }
+
+  func recordClipped(block: String, rendered: CGFloat, available: CGFloat) {
+   lock.lock()
+   defer { lock.unlock() }
+   _clippedText.append(
+    ClippedText(block: block, renderedHeightPx: rendered, availableHeightPx: available))
+  }
+
+  var hasClipping: Bool {
+   lock.lock()
+   defer { lock.unlock() }
+   return !_clippedText.isEmpty
+  }
+ }
+
+ let diagnostics = Diagnostics()
+
  private static let fallbackSpineColor = NSColor(
   red: 18 / 255, green: 43 / 255, blue: 34 / 255, alpha: 1)
 
@@ -146,9 +194,9 @@ struct CoverRenderer {
     : maxW
    blurbPillowBottom = drawWrappedTextBlock(
     ctx: ctx, text: blurb, x: bx,
-    pillowTop: byPillow, font: CTFontCreateWithName("Arial" as CFString, 43, nil),
+    pillowTop: byPillow, font: CTFontCreateWithName("Arial" as CFString, CGFloat(data.resolvedBlurbFontSizePoints()), nil),
     color: NSColor(hex: data.colorBody), maxWidth: min(maxW, blurbMaxWidth),
-    lineSpacing: 6, paragraphSpacing: 20, maxPillowBottom: maxYPillow)
+    lineSpacing: 6, paragraphSpacing: 20, maxPillowBottom: maxYPillow, blockName: "blurb")
   }
 
   // Quote — centered below blurb
@@ -157,10 +205,17 @@ struct CoverRenderer {
    let qcx =
     CGFloat(g.effectiveBackLeft) + CGFloat(g.frontWidth) / 2 + CGFloat(data.quoteOffsetXInches)
     * CGFloat(geometry.dpi)
+   let configuredQuoteSize = data.resolvedQuoteFontSizePoints()
    let font = CTFontCreateWithName(
     "Arial" as CFString,
     fitFontSize(
-     text: "\u{201C}\(quote)\u{201D}", maxWidth: maxW, maxSize: 38, minSize: 14, fontName: "Arial"),
+     text: "\u{201C}\(quote)\u{201D}", maxWidth: maxW,
+     maxSize: Int(configuredQuoteSize.rounded()),
+     // A quote wider than the panel shrinks until it fits, but never below the
+     // configured size: asking for 20pt and getting 14pt back would be the
+     // control ignoring the setting.
+     minSize: Int(min(configuredQuoteSize, CoverLayoutDefaults.backQuoteMinFontSizePoints).rounded()),
+     fontName: "Arial"),
     nil)
    let color = NSColor(hex: data.colorAccent)
    let quotePillowY =
@@ -235,7 +290,7 @@ struct CoverRenderer {
   // Author bio
   let bio = data.resolvedAuthorBio().trimmingCharacters(in: .whitespaces)
   if !bio.isEmpty {
-   let bfont = CTFontCreateWithName("Arial" as CFString, 32, nil)
+   let bfont = CTFontCreateWithName("Arial" as CFString, CGFloat(data.resolvedAuthorBioFontSizePoints()), nil)
    let bcolor = NSColor(hex: data.colorSoft)
    let bx = safeX + CGFloat(data.authorBioOffsetXInches) * CGFloat(geometry.dpi)
 
@@ -259,7 +314,7 @@ struct CoverRenderer {
     pillowTop: bioStartPillow,
     font: bfont, color: bcolor, maxWidth: min(maxW, bioMaxWidth),
     lineSpacing: 5, paragraphSpacing: data.authorBioParagraphGapPoints,
-    maxPillowBottom: bioMaxPillow)
+    maxPillowBottom: bioMaxPillow, blockName: "author bio")
   }
  }
 
@@ -572,7 +627,8 @@ struct CoverRenderer {
   maxWidth: CGFloat,
   lineSpacing: CGFloat,
   paragraphSpacing: CGFloat,
-  maxPillowBottom: CGFloat
+  maxPillowBottom: CGFloat,
+  blockName: String? = nil
  ) -> CGFloat {
   let attr = attributedParagraphText(
    text,
@@ -589,6 +645,26 @@ struct CoverRenderer {
   ).integral
   let drawHeight = min(availableHeight, measured.height)
   let pillowRect = CGRect(x: x, y: pillowTop, width: maxWidth, height: drawHeight)
+
+  // `measured` cannot reveal an overflow: it is bounded by the very height we
+  // would compare it against, so it always comes back at or under
+  // availableHeight however long the text is. The true requirement needs its own
+  // measurement with the height left unbounded. (Verified: 8 repeated sentences
+  // at 120pt measure 426 in a 500-tall box and 4024 unbounded.)
+  //
+  // This is measured separately rather than by changing `measured`, so the drawn
+  // geometry is exactly what it was before any of this existed.
+  let requiredHeight = attr.boundingRect(
+   with: CGSize(width: maxWidth, height: CGFloat.greatestFiniteMagnitude),
+   options: [.usesLineFragmentOrigin, .usesFontLeading]
+  ).integral.height
+
+  if requiredHeight > availableHeight, availableHeight > 0 {
+   diagnostics.recordClipped(
+    block: blockName ?? "back-cover text",
+    rendered: requiredHeight,
+    available: availableHeight)
+  }
 
   ctx.saveGState()
   ctx.translateBy(x: 0, y: CGFloat(geometry.totalHeight))

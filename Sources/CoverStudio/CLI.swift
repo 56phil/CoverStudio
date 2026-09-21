@@ -242,9 +242,22 @@ enum CLI {
           "total_width_inches": round6(geometry.totalWidthInches),
           "total_height_inches": round6(geometry.totalHeightInches),
           "outputs": written,
+          "clipped": renderer.diagnostics.clippedText.map {
+            [
+              "block": $0.block,
+              "rendered_height_px": round6(Double($0.renderedHeightPx)),
+              "available_height_px": round6(Double($0.availableHeightPx)),
+              "overflow_px": round6(Double($0.overflowPx)),
+            ]
+          },
         ])
       } else {
         for path in written { print(path) }
+        for clipped in renderer.diagnostics.clippedText {
+          FileHandle.standardError.write(Data(
+            "warning: \(clipped.block) is clipped — needs \(Int(clipped.renderedHeightPx))px, \(Int(clipped.availableHeightPx))px available (over by \(Int(clipped.overflowPx))px). Reduce its font size or shorten it.\n"
+              .utf8))
+        }
       }
       return CLIExit.ok
     } catch {

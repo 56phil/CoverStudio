@@ -160,6 +160,21 @@ struct CoverData: Codable, Equatable {
         bindingType == .hc ? hcAuthorBio : authorBio
     }
 
+    // Back cover text sizes. A stored 0 means "unset", so the default applies and
+    // a cover.md predating these fields renders exactly as it did before.
+    func resolvedBlurbFontSizePoints() -> Double {
+        let stored = bindingType == .hc ? hcBlurbFontSizePoints : blurbFontSizePoints
+        return stored > 0 ? stored : CoverLayoutDefaults.backBlurbFontSizePoints
+    }
+    func resolvedQuoteFontSizePoints() -> Double {
+        let stored = bindingType == .hc ? hcQuoteFontSizePoints : quoteFontSizePoints
+        return stored > 0 ? stored : CoverLayoutDefaults.backQuoteFontSizePoints
+    }
+    func resolvedAuthorBioFontSizePoints() -> Double {
+        let stored = bindingType == .hc ? hcAuthorBioFontSizePoints : authorBioFontSizePoints
+        return stored > 0 ? stored : CoverLayoutDefaults.backAuthorBioFontSizePoints
+    }
+
     // Spine
     var spineText: Bool = true
     var spineColor: String = "auto"
@@ -188,6 +203,16 @@ struct CoverData: Codable, Equatable {
     var authorBioOffsetYInches: Double = 0.0
     var authorBioWidthInches: Double = 0.0
     var authorBioParagraphGapPoints: Double = CoverLayoutDefaults.backAuthorBioParagraphGapPoints
+
+    // Back cover — text sizes, per binding, in points at the render DPI.
+    // 0 means "use the default", so a cover.md written before these existed
+    // renders exactly as it did before.
+    var blurbFontSizePoints: Double = 0.0
+    var hcBlurbFontSizePoints: Double = 0.0
+    var quoteFontSizePoints: Double = 0.0
+    var hcQuoteFontSizePoints: Double = 0.0
+    var authorBioFontSizePoints: Double = 0.0
+    var hcAuthorBioFontSizePoints: Double = 0.0
 
     // Back cover — image
     var authorPhoto: String = ""
@@ -404,6 +429,12 @@ struct CoverData: Codable, Equatable {
         case pbBackAuthorBioWidthInches = "pb_back_author_bio_width_inches"
         case hcBackAuthorBioWidthInches = "hc_back_author_bio_width_inches"
         case backAuthorBioParagraphGapPoints = "back_author_bio_paragraph_gap_points"
+        case blurbFontSizePoints = "blurb_font_size_points"
+        case hcBlurbFontSizePoints = "hc_blurb_font_size_points"
+        case quoteFontSizePoints = "quote_font_size_points"
+        case hcQuoteFontSizePoints = "hc_quote_font_size_points"
+        case authorBioFontSizePoints = "author_bio_font_size_points"
+        case hcAuthorBioFontSizePoints = "hc_author_bio_font_size_points"
         case pbBackAuthorImageOffsetXInches = "pb_back_author_image_offset_x_inches"
         case pbBackAuthorImageOffsetYInches = "pb_back_author_image_offset_y_inches"
         case hcBackAuthorImageOffsetXInches = "hc_back_author_image_offset_x_inches"
@@ -705,6 +736,12 @@ struct CoverData: Codable, Equatable {
         quoteAttributionOffsetYInches = container.doubleOrZero(.quoteAttributionOffsetYInches)
         authorBio = container.stringOrEmpty(.authorBio)
         hcAuthorBio = container.stringOrDefault(.hcAuthorBio, defaultValue: authorBio)
+        blurbFontSizePoints = container.doubleOrZero(.blurbFontSizePoints)
+        hcBlurbFontSizePoints = container.doubleOrZero(.hcBlurbFontSizePoints)
+        quoteFontSizePoints = container.doubleOrZero(.quoteFontSizePoints)
+        hcQuoteFontSizePoints = container.doubleOrZero(.hcQuoteFontSizePoints)
+        authorBioFontSizePoints = container.doubleOrZero(.authorBioFontSizePoints)
+        hcAuthorBioFontSizePoints = container.doubleOrZero(.hcAuthorBioFontSizePoints)
         authorBioOffsetXInches = container.bindingDouble(
             canonical: .authorBioOffsetXInches,
             paperback: .pbBackAuthorBioOffsetXInches,
@@ -897,6 +934,12 @@ struct CoverData: Codable, Equatable {
         try container.encode(quoteAttributionOffsetYInches, forKey: .quoteAttributionOffsetYInches)
         try container.encode(authorBio, forKey: .authorBio)
         try container.encode(hcAuthorBio, forKey: .hcAuthorBio)
+        try container.encode(blurbFontSizePoints, forKey: .blurbFontSizePoints)
+        try container.encode(hcBlurbFontSizePoints, forKey: .hcBlurbFontSizePoints)
+        try container.encode(quoteFontSizePoints, forKey: .quoteFontSizePoints)
+        try container.encode(hcQuoteFontSizePoints, forKey: .hcQuoteFontSizePoints)
+        try container.encode(authorBioFontSizePoints, forKey: .authorBioFontSizePoints)
+        try container.encode(hcAuthorBioFontSizePoints, forKey: .hcAuthorBioFontSizePoints)
         try container.encode(authorBioOffsetXInches, forKey: .authorBioOffsetXInches)
         try container.encode(authorBioOffsetYInches, forKey: .authorBioOffsetYInches)
         try container.encode(authorBioWidthInches, forKey: .authorBioWidthInches)

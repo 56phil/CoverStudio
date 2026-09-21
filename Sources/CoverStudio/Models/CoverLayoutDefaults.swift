@@ -19,4 +19,18 @@ enum CoverLayoutDefaults {
     static let backAuthorBioParagraphGapPoints = 8.0
     static let backAuthorPhotoSizeInches = 1.18
     static let backBarcodeBottomMarginInches = 0.25
+
+    // Back cover text sizes, in points at the render DPI (300). The renderer
+    // converts with px(), so 1pt here is 1px on the cover rather than a
+    // typographic point. These are the sizes the renderer hardcoded before the
+    // size became configurable, so an unset field reproduces the old output
+    // exactly.
+    static let backBlurbFontSizePoints = 43.0
+    static let backQuoteFontSizePoints = 38.0
+    static let backAuthorBioFontSizePoints = 32.0
+
+    /// The quote is scaled down to fit the panel when it is too wide. These bound
+    /// that reduction so a long quote shrinks rather than overflowing.
+    static let backQuoteMinFontSizePoints = 14.0
+    static let backQuoteAttributionFontSizePoints = 30.0
 }
