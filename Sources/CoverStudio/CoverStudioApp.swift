@@ -2,7 +2,8 @@ import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
 
-@main
+/// The GUI scene. There is no `@main` here because `main.swift` decides between
+/// the command-line interface and this app, then calls `CoverStudioApp.main()`.
 struct CoverStudioApp: App {
     @State private var document = CoverStudioDocument()
     @State private var fileURL: URL?
