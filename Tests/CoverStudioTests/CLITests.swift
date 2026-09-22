@@ -46,6 +46,49 @@ final class CLITests: XCTestCase {
         XCTAssertEqual(CLI.main(arguments: ["help"]), CLIExit.ok)
     }
 
+    /// `--version` and the app bundle disagreeing is not hypothetical: the bundle
+    /// reached 0.1.13 while the CLI still printed a hardcoded 0.1.0, because a
+    /// second copy of the number lived in a plist nothing read and a third defaulted
+    /// inside package-release.sh. This runs the real reader, scripts/version.sh,
+    /// which build-app.sh and package-release.sh both call, and asserts it agrees
+    /// with the constant the binary prints. Renaming or requoting that declaration
+    /// fails here instead of silently stamping a wrong version into the bundle.
+    func testTheVersionReaderAgreesWithTheBinary() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()  // CoverStudioTests
+            .deletingLastPathComponent()  // Tests
+            .deletingLastPathComponent()  // repo root
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/bash")
+        process.arguments = [root.appendingPathComponent("scripts/version.sh").path]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        try process.run()
+        let output = String(decoding: pipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        process.waitUntilExit()
+
+        XCTAssertEqual(process.terminationStatus, 0,
+                       "version.sh must find the declaration in CLI.swift")
+        XCTAssertEqual(output, coverStudioVersion,
+                       "the version stamped into the bundle must be the one --version prints")
+        XCTAssertEqual(output.split(separator: ".").count, 3,
+                       "CFBundleShortVersionString wants three dot-separated numbers")
+
+        // The build scripts must delegate rather than carry their own copy, which is
+        // what let the numbers diverge in the first place.
+        for script in ["build-app.sh", "scripts/package-release.sh"] {
+            let text = try String(contentsOf: root.appendingPathComponent(script), encoding: .utf8)
+            XCTAssertTrue(text.contains("version.sh"),
+                          "\(script) should get the version from scripts/version.sh, not a literal of its own")
+            XCTAssertFalse(text.contains("VERSION:-0."),
+                           "\(script) still has a hardcoded version default")
+            XCTAssertFalse(text.contains("VERSION:-\"0."),
+                           "\(script) still has a hardcoded version default")
+        }
+    }
+
     func testUnknownCommandIsAUsageError() {
         XCTAssertEqual(CLI.main(arguments: ["frobnicate"]), CLIExit.usage)
     }

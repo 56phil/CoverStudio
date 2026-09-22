@@ -19,9 +19,12 @@ enum CLIExit {
   static let failure: Int32 = 3
 }
 
-/// Kept in step with `CFBundleShortVersionString` in Resources/Info.plist and the
-/// `VERSION` default in build-app.sh, so `--version` and the bundle agree.
-let coverStudioVersion = "0.1.0"
+/// The release version. This line is the only copy; `build-app.sh` reads it and
+/// stamps it into the app bundle's `CFBundleShortVersionString`, so Finder, the
+/// DMG name, and `--version` cannot disagree.
+///
+/// Bump it here. Editing the plist in a built `.app` changes nothing that ships.
+let coverStudioVersion = "0.1.13"
 
 enum CLI {
 

@@ -8,7 +8,11 @@
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-VERSION="${1:-0.1.0}"
+
+# Default to the version declared in CLI.swift and printed by `--version`. The old
+# literal default here was a third copy of the number, and it would have named a
+# DMG 0.1.0 while the app inside it reported something else.
+VERSION="${1:-$("$PROJECT_DIR/scripts/version.sh")}"
 BUILD_NUMBER="${BUILD_NUMBER:-1}"
 APP_NAME="CoverStudio"
 APP_BUNDLE="$PROJECT_DIR/.build/release/${APP_NAME}.app"

@@ -198,8 +198,13 @@ The script creates:
 To package a downloadable DMG for a GitHub Release:
 
 ```sh
-./scripts/package-release.sh 0.1.0
+./scripts/package-release.sh
 ```
+
+The version comes from `coverStudioVersion` in `Sources/CoverStudio/CLI.swift` — the
+same string `CoverStudio --version` prints — so the DMG name, the bundle, and the
+binary cannot disagree. Bump that one line to cut a release; `scripts/version.sh`
+is what reads it.
 
 For public distribution, sign and notarize the DMG with a Developer ID
 certificate. See `RELEASE.md` for the release checklist.
