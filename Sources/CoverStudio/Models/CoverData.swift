@@ -223,11 +223,10 @@ struct CoverData: Codable, Equatable {
     var authorPhotoCropOffsetX: Double = 0.0  // -1…+1, shifts crop window left/right within source image
     var authorPhotoCropOffsetY: Double = 0.0  // -1…+1, shifts crop window up/down within source image
 
-    // Colors
+    // Colors. All front-cover text uses colorTitle; all back-cover and spine
+    // text uses colorBody.
     var colorTitle: String = "#daa520"
-    var colorAccent: String = "#eec448"
     var colorBody: String = "#efe6d4"
-    var colorSoft: String = "#c6bca9"
 
     // Fonts
     var fontTitle: String = ""
@@ -478,9 +477,7 @@ struct CoverData: Codable, Equatable {
         case authorPhotoCropOffsetY = "author_photo_crop_offset_y"
 
         case colorTitle = "color_title"
-        case colorAccent = "color_accent"
         case colorBody = "color_body"
-        case colorSoft = "color_soft"
 
         case fontTitle = "font_title"
         case fontBold = "font_bold"
@@ -798,9 +795,7 @@ struct CoverData: Codable, Equatable {
             .authorPhotoCropOffsetY, defaultValue: 0.0)
 
         colorTitle = container.stringOrDefault(.colorTitle, defaultValue: "#daa520")
-        colorAccent = container.stringOrDefault(.colorAccent, defaultValue: "#eec448")
         colorBody = container.stringOrDefault(.colorBody, defaultValue: "#efe6d4")
-        colorSoft = container.stringOrDefault(.colorSoft, defaultValue: "#c6bca9")
 
         fontTitle = container.stringOrEmpty(.fontTitle)
         fontBold = container.stringOrEmpty(.fontBold)
@@ -968,9 +963,7 @@ struct CoverData: Codable, Equatable {
             try container.encode(authorPhotoOffsetYInches, forKey: .pbBackAuthorImageOffsetYInches)
         }
         try container.encode(colorTitle, forKey: .colorTitle)
-        try container.encode(colorAccent, forKey: .colorAccent)
         try container.encode(colorBody, forKey: .colorBody)
-        try container.encode(colorSoft, forKey: .colorSoft)
         try container.encode(fontTitle, forKey: .fontTitle)
         try container.encode(fontBold, forKey: .fontBold)
         try container.encode(fontRegular, forKey: .fontRegular)

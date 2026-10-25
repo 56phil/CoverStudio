@@ -194,7 +194,9 @@ struct CoverRenderer {
     : maxW
    blurbPillowBottom = drawWrappedTextBlock(
     ctx: ctx, text: blurb, x: bx,
-    pillowTop: byPillow, font: CTFontCreateWithName("Arial" as CFString, CGFloat(data.resolvedBlurbFontSizePoints()), nil),
+    pillowTop: byPillow,
+    font: CTFontCreateWithName(
+     "Arial" as CFString, CGFloat(data.resolvedBlurbFontSizePoints()), nil),
     color: NSColor(hex: data.colorBody), maxWidth: min(maxW, blurbMaxWidth),
     lineSpacing: 6, paragraphSpacing: 20, maxPillowBottom: maxYPillow, blockName: "blurb")
   }
@@ -214,10 +216,11 @@ struct CoverRenderer {
      // A quote wider than the panel shrinks until it fits, but never below the
      // configured size: asking for 20pt and getting 14pt back would be the
      // control ignoring the setting.
-     minSize: Int(min(configuredQuoteSize, CoverLayoutDefaults.backQuoteMinFontSizePoints).rounded()),
+     minSize: Int(
+      min(configuredQuoteSize, CoverLayoutDefaults.backQuoteMinFontSizePoints).rounded()),
      fontName: "Arial"),
     nil)
-   let color = NSColor(hex: data.colorAccent)
+   let color = NSColor(hex: data.colorBody)
    let quotePillowY =
     blurbPillowBottom + CGFloat(CoverGeometry.px(CoverLayoutDefaults.backQuoteGapInches)) + CGFloat(
      data.quoteOffsetYInches) * CGFloat(geometry.dpi)
@@ -228,7 +231,7 @@ struct CoverRenderer {
    let attr = data.quoteAttribution.trimmingCharacters(in: .whitespaces)
    if !attr.isEmpty {
     let afont = CTFontCreateWithName("Arial" as CFString, 30, nil)
-    let acolor = NSColor(hex: data.colorSoft)
+    let acolor = NSColor(hex: data.colorBody)
     let atext = attr.hasPrefix("-") ? attr : "- \(attr)"
     let ax = qcx + CGFloat(data.quoteAttributionOffsetXInches) * CGFloat(geometry.dpi)
     let attributionPillowY =
@@ -290,8 +293,9 @@ struct CoverRenderer {
   // Author bio
   let bio = data.resolvedAuthorBio().trimmingCharacters(in: .whitespaces)
   if !bio.isEmpty {
-   let bfont = CTFontCreateWithName("Arial" as CFString, CGFloat(data.resolvedAuthorBioFontSizePoints()), nil)
-   let bcolor = NSColor(hex: data.colorSoft)
+   let bfont = CTFontCreateWithName(
+    "Arial" as CFString, CGFloat(data.resolvedAuthorBioFontSizePoints()), nil)
+   let bcolor = NSColor(hex: data.colorBody)
    let bx = safeX + CGFloat(data.authorBioOffsetXInches) * CGFloat(geometry.dpi)
 
    // bioStartPillow = trimBottom - 2.5in + offsetY, flows down
@@ -370,7 +374,7 @@ struct CoverRenderer {
      fitFontSize(
       text: subtitle, maxWidth: maxW, maxSize: maxSubtitleSize, minSize: 10, fontName: "Arial"), nil
     )
-    let scolor = NSColor(hex: data.colorAccent)
+    let scolor = gold
     let sx =
      data.resolvedSubtitleCenterX()
      ? centerX
@@ -499,7 +503,7 @@ struct CoverRenderer {
   let center =
    CGFloat(g.spineLeft) + CGFloat(g.spineWidth) / 2 + CGFloat(data.spineTextOffsetInches)
    * CGFloat(geometry.dpi)
-  let gold = NSColor(hex: data.colorTitle)
+  let textColor = NSColor(hex: data.colorBody)
 
   let st = data.title.uppercased()
   if !st.isEmpty {
@@ -509,7 +513,7 @@ struct CoverRenderer {
     CGFloat(g.trimTop) + CGFloat(CoverGeometry.px(CoverLayoutDefaults.spineTitleTopInches))
     + CGFloat(data.spineTitleOffsetYInches) * CGFloat(geometry.dpi)
    drawRotatedText(
-    ctx: ctx, text: st, font: font, color: gold,
+    ctx: ctx, text: st, font: font, color: textColor,
     centerX: center + CGFloat(data.spineTitleOffsetXInches) * CGFloat(geometry.dpi),
     y: cgYf(tyPillow), degrees: -90)
   }
@@ -521,7 +525,7 @@ struct CoverRenderer {
     CGFloat(g.trimBottom) - CGFloat(CoverGeometry.px(CoverLayoutDefaults.spineAuthorBottomInches))
     + CGFloat(data.spineAuthorOffsetYInches) * CGFloat(geometry.dpi)
    drawRotatedText(
-    ctx: ctx, text: sa, font: font, color: gold,
+    ctx: ctx, text: sa, font: font, color: textColor,
     centerX: center + CGFloat(data.spineAuthorOffsetXInches) * CGFloat(geometry.dpi),
     y: cgYf(ayPillow), degrees: -90)
   }
