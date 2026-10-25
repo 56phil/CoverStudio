@@ -1,5 +1,5 @@
-import SwiftUI
 import AppKit
+import SwiftUI
 
 enum FontRole {
     case title, bold, body, italic
@@ -7,8 +7,8 @@ enum FontRole {
     var label: String {
         switch self {
         case .title: "Title font"
-        case .bold:  "Bold font"
-        case .body:  "Body font"
+        case .bold: "Bold font"
+        case .body: "Body font"
         case .italic: "Italic font"
         }
     }
@@ -18,7 +18,7 @@ enum FontRole {
         let lower = fontName.lowercased()
         switch self {
         case .title, .body:
-            return true // show all fonts
+            return true  // show all fonts
         case .bold:
             return lower.contains("bold") || lower.contains("black") || lower.contains("heavy")
         case .italic:
@@ -34,16 +34,14 @@ struct FontsTab: View {
         Form {
             Section("Fonts") {
                 FontPicker(label: "Title font", fontName: $data.fontTitle, role: .title)
-                FontPicker(label: "Bold font",  fontName: $data.fontBold,  role: .bold)
-                FontPicker(label: "Body font",  fontName: $data.fontRegular, role: .body)
+                FontPicker(label: "Bold font", fontName: $data.fontBold, role: .bold)
+                FontPicker(label: "Body font", fontName: $data.fontRegular, role: .body)
                 FontPicker(label: "Italic font", fontName: $data.fontItalic, role: .italic)
             }
 
             Section("Colors") {
-                HexColorRow(label: "Title",  hex: $data.colorTitle)
-                HexColorRow(label: "Accent", hex: $data.colorAccent)
-                HexColorRow(label: "Body",   hex: $data.colorBody)
-                HexColorRow(label: "Soft",   hex: $data.colorSoft)
+                HexColorRow(label: "Front text", hex: $data.colorTitle)
+                HexColorRow(label: "Back & spine text", hex: $data.colorBody)
             }
         }
     }
@@ -98,7 +96,8 @@ struct FontPicker: View {
                     HStack {
                         Text(label).font(.headline)
                         Spacer()
-                        Text("\(availableFonts.count) fonts").font(.caption).foregroundColor(.secondary)
+                        Text("\(availableFonts.count) fonts").font(.caption).foregroundColor(
+                            .secondary)
                         Button("Done") { showSheet = false }
                             .keyboardShortcut(.escape, modifiers: [])
                     }
@@ -156,12 +155,15 @@ struct HexColorRow: View {
             Text(label)
                 .frame(width: 50, alignment: .leading)
 
-            ColorPicker("", selection: Binding(
-                get: { Color(nsColor: NSColor(hex: hex)) },
-                set: { newColor in
-                    hex = NSColor(newColor).hexString
-                }
-            ))
+            ColorPicker(
+                "",
+                selection: Binding(
+                    get: { Color(nsColor: NSColor(hex: hex)) },
+                    set: { newColor in
+                        hex = NSColor(newColor).hexString
+                    }
+                )
+            )
             .labelsHidden()
 
             TextField("#RRGGBB", text: $hex)

@@ -1,5 +1,6 @@
 import Foundation
 import XCTest
+
 @testable import CoverStudio
 
 final class ValidationTests: XCTestCase {
@@ -27,7 +28,9 @@ final class ValidationTests: XCTestCase {
 
         let issues = Validation.validate(data, sourceURL: coverURL)
         let imageErrors = issues.filter { $0.field == "front_cover_image" && $0.severity == .error }
-        XCTAssertTrue(imageErrors.isEmpty, "Should not report missing image when file exists at resolved path")
+        XCTAssertTrue(
+            imageErrors.isEmpty, "Should not report missing image when file exists at resolved path"
+        )
     }
 
     func testValidationFailsWhenFrontImageMissing() throws {
@@ -39,7 +42,9 @@ final class ValidationTests: XCTestCase {
         // Do NOT create the image file
         let issues = Validation.validate(data, sourceURL: coverURL)
         let imageErrors = issues.filter { $0.field == "front_cover_image" && $0.severity == .error }
-        XCTAssertFalse(imageErrors.isEmpty, "Should report error when relative image path does not resolve to an existing file")
+        XCTAssertFalse(
+            imageErrors.isEmpty,
+            "Should report error when relative image path does not resolve to an existing file")
     }
 
     func testValidationReportsErrorForAbsoluteMissingImage() {
@@ -67,14 +72,12 @@ final class ValidationTests: XCTestCase {
     func testValidationAcceptsValidHexColors() {
         var data = CoverData()
         data.pbPageCount = 200
-        data.colorTitle  = "#daa520"
-        data.colorAccent = "#ffffff"
-        data.colorBody   = "#cccccc"
-        data.colorSoft   = "#888888"
+        data.colorTitle = "#daa520"
+        data.colorBody = "#cccccc"
 
         let issues = Validation.validate(data)
         let colorErrors = issues.filter {
-            ["color_title", "color_accent", "color_body", "color_soft"].contains($0.field) && $0.severity == .error
+            ["color_title", "color_body"].contains($0.field) && $0.severity == .error
         }
         XCTAssertTrue(colorErrors.isEmpty)
     }
@@ -128,20 +131,21 @@ final class ValidationTests: XCTestCase {
         let templateErrors = issues.filter {
             $0.field.hasPrefix("template_") && $0.severity == .error
         }
-        XCTAssertEqual(templateErrors.count, 7, "All 7 template fields should be flagged when missing for HC")
+        XCTAssertEqual(
+            templateErrors.count, 7, "All 7 template fields should be flagged when missing for HC")
     }
 
     func testValidationPassesHardcoverWithAllTemplateFields() {
         var data = CoverData()
         data.bindingType = .hc
         data.hcPageCount = 200
-        data.templateFullCoverWidth  = 13.996
+        data.templateFullCoverWidth = 13.996
         data.templateFullCoverHeight = 10.417
         data.templateFrontCoverWidth = 6.197
         data.templateFrontCoverHeight = 9.236
         data.templateSpineWidth = 0.421
         data.templateHingeWidth = 0.394
-        data.templateWrapWidth  = 0.591
+        data.templateWrapWidth = 0.591
 
         let issues = Validation.validate(data)
         let templateErrors = issues.filter {

@@ -97,10 +97,8 @@ struct Validation {
 
         // Colors
         for (key, color, label) in [
-            ("color_title", data.colorTitle, "Title color"),
-            ("color_accent", data.colorAccent, "Accent color"),
-            ("color_body", data.colorBody, "Body color"),
-            ("color_soft", data.colorSoft, "Soft text color"),
+            ("color_title", data.colorTitle, "Front text color"),
+            ("color_body", data.colorBody, "Back and spine text color"),
         ] {
             if !isValidHexColor(color) {
                 issues.append(
