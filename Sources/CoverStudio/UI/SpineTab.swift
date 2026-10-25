@@ -26,6 +26,8 @@ struct SpineTab: View {
                 }
                 TextField("Text offset (in)", value: $data.spineTextOffsetInches, format: .number)
                 TextField("Color extension (in)", value: $data.spineColorExtensionInches, format: .number)
+                TextField("Color extension (% of cover width)", value: $data.spineColorExtensionPercent, format: .number)
+                    .help("Scales the band with the trim. Percent wins over inches when above zero.")
             }
             if data.spineText {
                 Section("Spine Title") {
