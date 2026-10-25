@@ -214,6 +214,38 @@ final class ProjectManagerTests: XCTestCase {
       try numericValue(saved, "pb_front_title_offset_x_inches"), 0.05, accuracy: 0.0001)
   }
 
+  // The percentage is the key that lets one cover.md serve two trims, so it has to
+  // survive a save round-trip and win over the fixed inches once it is set.
+  func testSpineBandPercentPersistsThroughSaveAndLoad() throws {
+    let coverURL = try makeCoverFile(
+      contents: """
+        ---
+        schema_version: 1
+        binding_type: pb
+        trim_size: 6x9
+        page_count: 206
+        spine_color: "#6C1715"
+        spine_color_extension_inches: 0.5
+        ---
+        """)
+
+    var data = try ProjectManager.load(from: coverURL)
+    XCTAssertEqual(data.spineColorExtensionPercent, 0, accuracy: 0.0001)
+    XCTAssertEqual(
+      data.resolvedSpineColorExtensionInches(frontWidthInches: 5), 0.5, accuracy: 0.0001)
+
+    data.spineColorExtensionPercent = 8.07
+    try ProjectManager.save(data, to: coverURL)
+
+    let saved = try savedFrontmatterMap(from: coverURL)
+    XCTAssertEqual(
+      try numericValue(saved, "spine_color_extension_percent"), 8.07, accuracy: 0.0001)
+
+    let reloaded = try ProjectManager.load(from: coverURL)
+    XCTAssertEqual(
+      reloaded.resolvedSpineColorExtensionInches(frontWidthInches: 5), 0.4035, accuracy: 0.0001)
+  }
+
   func testPageCountIsBindingSpecific() throws {
     let coverURL = try makeCoverFile(
       contents: """

@@ -490,7 +490,9 @@ struct CoverRenderer {
  private func drawSpine(ctx: CGContext, spineColor: NSColor) {
   let g = geometry
   let sc = spineColor
-  let ext = CGFloat(data.spineColorExtensionInches) * CGFloat(geometry.dpi)
+  let ext =
+   CGFloat(data.resolvedSpineColorExtensionInches(frontWidthInches: g.frontWidthInches))
+   * CGFloat(geometry.dpi)
   let totalH = CGFloat(g.totalHeight)
   ctx.setFillColor(sc.cgColor)
   ctx.fill(

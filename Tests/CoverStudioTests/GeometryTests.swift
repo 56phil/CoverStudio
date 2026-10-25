@@ -83,6 +83,27 @@ final class GeometryTests: XCTestCase {
     XCTAssertEqual(g.effectiveBackLeft, g.frontLeft)
   }
 
+  // A fixed extension is a different band on a 5×8 and a 6×9 book; a percentage of
+  // the front cover's width keeps the proportion identical across trims.
+  func testSpineBandPercentScalesWithFrontWidth() {
+    var data = CoverData()
+    data.spineColorExtensionInches = 0.5
+    data.spineColorExtensionPercent = 8.07
+
+    XCTAssertEqual(
+      data.resolvedSpineColorExtensionInches(frontWidthInches: 6.197), 0.5001, accuracy: 0.0005)
+    XCTAssertEqual(
+      data.resolvedSpineColorExtensionInches(frontWidthInches: 5), 0.4035, accuracy: 0.0001)
+  }
+
+  func testSpineBandFallsBackToInchesWithoutAPercentage() {
+    var data = CoverData()
+    data.spineColorExtensionInches = 0.33
+
+    XCTAssertEqual(
+      data.resolvedSpineColorExtensionInches(frontWidthInches: 5), 0.33, accuracy: 0.0001)
+  }
+
   func testCustomSpineOverridesCalculated() throws {
     var data = CoverData()
     data.bindingType = .pb

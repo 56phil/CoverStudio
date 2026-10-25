@@ -19,7 +19,7 @@ CoverStudio is early software. It can already:
 - Use KDP-style trim, spine, hinge, wrap, bleed, and safe-area values.
 - Place front-cover art, title, subtitle, and author text.
 - Preserve precomposed front art with `front_text: false`.
-- Tune spine text, spine color, and color extension.
+- Tune spine text, spine color, and color extension, in inches or as a percentage of the cover width so the band scales across trims.
 - Place back-cover blurb, quote, author bio, and author photo.
 - Set the back-cover blurb, quote, and bio font sizes, per binding (paperback and hardcover independently).
 - Export the full wraparound cover as PDF; a PNG copy is written alongside it automatically.
@@ -239,6 +239,23 @@ spine_text: true
 
 Relative asset paths may be written relative to the book root, such as
 `cover/assets/base.png`, or relative to the cover metadata file.
+
+### Spine colour band across trims
+
+`spine_color_extension_inches` widens the spine colour onto the front cover by a
+fixed amount, so the same value is a different proportion on a 5×8 paperback and a
+6×9 hardcover. Set `spine_color_extension_percent` instead to make the band scale
+with the cover — it is a percentage of the front cover's width, and it wins over the
+inch value whenever it is above zero:
+
+```yaml
+spine_color: "#6C1715"
+spine_color_extension_percent: 8.07   # 0.404 in on a 5×8 face, 0.500 in on a 6.197 in face
+spine_color_extension_inches: 0.5     # ignored while the percentage is set
+```
+
+`inspect --bind pb` and `inspect --bind hc` report the front width each run uses, so
+the conversion for an existing cover is `percent = 100 × inches ÷ front_width`.
 
 ## Repository
 

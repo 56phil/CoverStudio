@@ -153,6 +153,16 @@ struct CoverData: Codable, Equatable {
         if bindingType == .hc { return hcFrontImageOffsetYInches }
         return frontCoverImageOffsetYInches
     }
+    /// The spine colour band's reach onto the front cover, in inches.
+    ///
+    /// A percentage of the front cover's width scales with the trim, which is what
+    /// keeps a 5×8 paperback and a 6×9 hardcover looking like the same book.
+    /// Zero percent keeps the fixed-inch field in charge.
+    func resolvedSpineColorExtensionInches(frontWidthInches: Double) -> Double {
+        guard spineColorExtensionPercent > 0 else { return spineColorExtensionInches }
+        return frontWidthInches * spineColorExtensionPercent / 100
+    }
+
     func resolvedBlurb() -> String {
         bindingType == .hc ? hcBlurb : blurb
     }
@@ -180,6 +190,10 @@ struct CoverData: Codable, Equatable {
     var spineColor: String = "auto"
     var spineTextOffsetInches: Double = 0.0
     var spineColorExtensionInches: Double = CoverLayoutDefaults.spineColorExtensionInches
+    /// The band's reach onto the front cover as a percentage of the front cover's
+    /// width. Non-zero wins over `spineColorExtensionInches`, so the band keeps its
+    /// proportion when the paperback and the hardcover are different trims.
+    var spineColorExtensionPercent: Double = 0.0
     var spineTitleOffsetXInches: Double = 0.0
     var spineTitleOffsetYInches: Double = 0.0
     var spineAuthorOffsetXInches: Double = 0.0
@@ -285,6 +299,7 @@ struct CoverData: Codable, Equatable {
 
         spineTextOffsetInches = 0.0
         spineColorExtensionInches = CoverLayoutDefaults.spineColorExtensionInches
+        spineColorExtensionPercent = 0.0
         spineTitleOffsetXInches = 0.0
         spineTitleOffsetYInches = 0.0
         spineAuthorOffsetXInches = 0.0
@@ -445,6 +460,7 @@ struct CoverData: Codable, Equatable {
         case spineColor = "spine_color"
         case spineTextOffsetInches = "spine_text_offset_inches"
         case spineColorExtensionInches = "spine_color_extension_inches"
+        case spineColorExtensionPercent = "spine_color_extension_percent"
         case spineTitleOffsetXInches = "spine_title_offset_x_inches"
         case spineTitleOffsetYInches = "spine_title_offset_y_inches"
         case spineAuthorOffsetXInches = "spine_author_offset_x_inches"
@@ -670,6 +686,7 @@ struct CoverData: Codable, Equatable {
             .spineColorExtensionInches,
             defaultValue: CoverLayoutDefaults.spineColorExtensionInches
         )
+        spineColorExtensionPercent = container.doubleOrZero(.spineColorExtensionPercent)
         spineTitleOffsetXInches = container.bindingDouble(
             canonical: .spineTitleOffsetXInches,
             paperback: .pbSpineTitleOffsetXInches,
@@ -896,6 +913,7 @@ struct CoverData: Codable, Equatable {
         try container.encode(spineColor, forKey: .spineColor)
         try container.encode(spineTextOffsetInches, forKey: .spineTextOffsetInches)
         try container.encode(spineColorExtensionInches, forKey: .spineColorExtensionInches)
+        try container.encode(spineColorExtensionPercent, forKey: .spineColorExtensionPercent)
         try container.encode(spineTitleOffsetXInches, forKey: .spineTitleOffsetXInches)
         try container.encode(spineTitleOffsetYInches, forKey: .spineTitleOffsetYInches)
         try container.encode(spineAuthorOffsetXInches, forKey: .spineAuthorOffsetXInches)
