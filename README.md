@@ -24,6 +24,7 @@ CoverStudio is early software. It can already:
 - Set the back-cover blurb, quote, and bio font sizes, per binding (paperback and hardcover independently).
 - Export the full wraparound cover as PDF; a PNG copy is written alongside it automatically.
 - Export a front-cover crop as JPEG.
+- Write exports to the project's `cover` folder, creating it when absent; the export sheet can redirect a single run elsewhere.
 - Run headless: `render`, `validate`, and `inspect` subcommands for scripts and CI.
 
 The app is being developed against real book projects, so compatibility with

@@ -113,6 +113,15 @@ struct ProjectManager {
             .appendingPathComponent("cover.md")
     }
 
+    /// The export destination for a project: its `cover` folder, created when the
+    /// project does not have one yet. Exports live next to the cover metadata, so
+    /// one book's renders never land in another book's tree.
+    static func exportDirectory(in projectRoot: URL) throws -> URL {
+        let directory = projectRoot.appendingPathComponent("cover", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory
+    }
+
     // Find \n--- that ends the line (followed by \n or end-of-string).
     // A bare \n--- mid-token (e.g. \n---key:) is not a valid closing fence.
     private static func frontmatterClose(in text: String, from start: String.Index) -> Range<String.Index>? {

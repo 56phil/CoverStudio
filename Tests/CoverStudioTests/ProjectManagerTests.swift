@@ -140,6 +140,37 @@ final class ProjectManagerTests: XCTestCase {
     XCTAssertTrue(contents.contains("schema_version: 2"))
   }
 
+  func testExportDirectoryCreatesTheProjectCoverFolder() throws {
+    let root = FileManager.default.temporaryDirectory
+      .appendingPathComponent("CoverStudioTests-\(UUID().uuidString)", isDirectory: true)
+    temporaryRoots.append(root)
+    try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+
+    let directory = try ProjectManager.exportDirectory(in: root)
+
+    XCTAssertEqual(directory, root.appendingPathComponent("cover", isDirectory: true))
+    var isDirectory: ObjCBool = false
+    XCTAssertTrue(
+      FileManager.default.fileExists(atPath: directory.path, isDirectory: &isDirectory))
+    XCTAssertTrue(isDirectory.boolValue)
+  }
+
+  func testExportDirectoryKeepsExistingCoverFolderAndItsContents() throws {
+    let coverURL = try makeCoverFile(
+      contents: """
+        ---
+        schema_version: 1
+        title: Existing Book
+        ---
+        """)
+    let bookRoot = ProjectManager.projectRoot(for: coverURL)
+
+    let directory = try ProjectManager.exportDirectory(in: bookRoot)
+
+    XCTAssertEqual(directory, bookRoot.appendingPathComponent("cover", isDirectory: true))
+    XCTAssertTrue(FileManager.default.fileExists(atPath: coverURL.path))
+  }
+
   func testSavingMarkdownPreservesBodyAndUnknownGeneratorKeys() throws {
     let coverURL = try makeCoverFile(
       contents: """

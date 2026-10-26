@@ -14,7 +14,9 @@ struct ContentView: View {
     @AppStorage("exportJPG") private var exportJPG: Bool = true
     @AppStorage("exportBaseName") private var exportBaseName: String = "cover"
     @AppStorage("exportPrependBinding") private var exportPrependBinding: Bool = false
-    @AppStorage("exportDirectoryPath") private var exportDirectoryPath: String = ""
+    /// Export folder for the running export. Always starts at the project's
+    /// `cover` folder; a folder picked in the sheet applies to that export only.
+    @State private var exportDirectoryPath: String = ""
     @AppStorage("projectRoot") private var savedProjectRoot: String = ""
     @AppStorage("coverFilePath") private var savedCoverFilePath: String = ""
     @AppStorage("selectedTab") private var savedSelectedTab: String = InspectorTab.setup.rawValue
@@ -332,21 +334,22 @@ struct ContentView: View {
 
     private func openExportOptions() {
         commitPendingFieldEdits()
-        if exportDirectoryPath.isEmpty {
-            exportDirectoryPath = defaultExportDirectory().path
-        }
+        exportDirectoryPath = defaultExportDirectory().path
         if exportBaseName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             exportBaseName = "cover"
         }
         showExportOptions = true
     }
 
+    /// Exports land in the project's `cover` folder, created on demand. Falls back
+    /// to the opened file's folder when there is no book root, then to home.
     private func defaultExportDirectory() -> URL {
+        if let root = projectRoot,
+           let coverDirectory = try? ProjectManager.exportDirectory(in: URL(fileURLWithPath: root)) {
+            return coverDirectory
+        }
         if let currentFileURL {
             return currentFileURL.deletingLastPathComponent()
-        }
-        if let root = projectRoot {
-            return URL(fileURLWithPath: root).appendingPathComponent("cover", isDirectory: true)
         }
         return FileManager.default.homeDirectoryForCurrentUser
     }
